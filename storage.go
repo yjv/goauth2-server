@@ -11,9 +11,9 @@ type OwnerStorage interface {
 	FindByOwnerId(ownerId string)
 }
 
-type VerifyOwnerCredentialser interface {
+type OwnerCredentialsVerifier interface {
 
-	VerifyOwnerCredentials(username string, password string) (*string, error)
+	VerifyOwnerCredentials(username string, password string) (string, error)
 }
 
 type SessionStorage interface {

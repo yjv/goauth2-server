@@ -8,10 +8,11 @@ type Config struct {
 
 	DefaultAccessTokenExpires int64
 	DefaultRefreshTokenExpires int64
+	AllowRefresh bool
 	RotateRefreshTokens bool
 }
 
-func NewConfig(DefaultAccessTokenExpires int64, DefaultRefreshTokenExpires int64, RotateRefreshTokens bool) (*Config) {
+func NewConfig(DefaultAccessTokenExpires int64, DefaultRefreshTokenExpires int64, AllowRefresh bool, RotateRefreshTokens bool) *Config {
 
 	return &Config{DefaultAccessTokenExpires, DefaultRefreshTokenExpires, RotateRefreshTokens}
 }
@@ -22,18 +23,18 @@ type Server struct {
 	grants map[string]*Grant
 }
 
-func NewServer(config *Config) (*Server) {
+func NewServer(config *Config) *Server {
 
 	return &Server{config, make(map[string]*Grant)}
 }
 
-func (server *Server) AddGrant(grant *Grant) (*Server) {
+func (server *Server) AddGrant(grant *Grant) *Server {
 
 	server.grants[grant.Name()] = grant
 	return server
 }
 
-func (server *Server) HasGrant(name string) (bool) {
+func (server *Server) HasGrant(name string) bool {
 
 	_, ok := server.grants[name]
 	return ok
@@ -50,7 +51,29 @@ func (server *Server) GetGrant(name string) (*Grant, error) {
 	return grant, nil
 }
 
-func (*Server) GrantAccessToken() (*AccessToken, error, *Session) {
+func (server *Server) GrantAccessToken(accessTokenRequest *AccessTokenRequest) (*AccessToken, error, *Session) {
 
+	grant, error := server.GetGrant(accessTokenRequest.Grant)
 
+	if grant == nil {
+
+		return nil, error, nil
+	}
+
+	accessToken, error, createRefreshToken := grant.CreateAccessToken(accessTokenRequest)
+
+	if accessToken == nil {
+
+		return nil, error, nil
+	}
+
+	session := &Session{
+		accessToken,
+	}
+
+	if createRefreshToken && server.Config.AllowRefresh {
+
+	}
+
+	return accessToken, nil, session
 }
