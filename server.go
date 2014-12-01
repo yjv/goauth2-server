@@ -1,8 +1,25 @@
 package oauth2server
 
 import (
-	"errors"
+	"code.google.com/p/go-uuid/uuid"
+	"encoding/base64"
+	"fmt"
+	"time"
 )
+
+
+type TokenIdGeneratorFunc func() string
+
+type TokenGenerator interface {
+	GenerateToken(serverConfig *Config) (*Token, error)
+}
+
+func GenerateTokenId() string {
+
+	token := uuid.New()
+	token = base64.StdEncoding.EncodeToString([]byte(token))
+	return token
+}
 
 type Config struct {
 
@@ -10,27 +27,45 @@ type Config struct {
 	DefaultRefreshTokenExpires int64
 	AllowRefresh bool
 	RotateRefreshTokens bool
-}
-
-func NewConfig(DefaultAccessTokenExpires int64, DefaultRefreshTokenExpires int64, AllowRefresh bool, RotateRefreshTokens bool) *Config {
-
-	return &Config{DefaultAccessTokenExpires, DefaultRefreshTokenExpires, RotateRefreshTokens}
+	TokenIdGenerator TokenIdGeneratorFunc
+	ClientStorage ClientStorage
+	OwnerStorage OwnerStorage
+	SessionStorage SessionStorage
 }
 
 type Server struct {
 
 	Config *Config
-	grants map[string]*Grant
+	grants map[string]Grant
 }
 
 func NewServer(config *Config) *Server {
 
-	return &Server{config, make(map[string]*Grant)}
+	return &Server{
+		config,
+		make(map[string]Grant),
+	}
 }
 
-func (server *Server) AddGrant(grant *Grant) *Server {
+func NewConfig(clientStorage ClientStorage, ownerStorage OwnerStorage, sessionStorage SessionStorage) *Config {
+
+	return &Config{
+		3600, //1 hour
+		604800, //1 week
+		true,
+		true,
+		GenerateTokenId,
+		clientStorage,
+		ownerStorage,
+		sessionStorage,
+	}
+}
+
+func (server *Server) AddGrant(grant Grant) *Server {
 
 	server.grants[grant.Name()] = grant
+	grant.SetServer(server)
+
 	return server
 }
 
@@ -40,40 +75,74 @@ func (server *Server) HasGrant(name string) bool {
 	return ok
 }
 
-func (server *Server) GetGrant(name string) (*Grant, error) {
+func (server *Server) GetGrant(name string) (Grant, error) {
 
 	if !server.HasGrant(name) {
 
-		return errors.New("The grant was not found");
+		return nil, fmt.Errorf("The grant %q was not found", name);
 	}
 
 	grant := server.grants[name]
 	return grant, nil
 }
 
-func (server *Server) GrantAccessToken(accessTokenRequest *AccessTokenRequest) (*AccessToken, error, *Session) {
+func (server *Server) GrantOauthSession(accessTokenRequest AccessTokenRequest) (*Session, error) {
 
-	grant, error := server.GetGrant(accessTokenRequest.Grant)
+	grant, error := server.GetGrant(accessTokenRequest.Grant())
 
 	if grant == nil {
 
-		return nil, error, nil
+		return nil, error
 	}
 
-	accessToken, error, createRefreshToken := grant.CreateAccessToken(accessTokenRequest)
+	session := &Session{}
 
-	if accessToken == nil {
+	authenticated, createRefreshToken, error := grant.AuthenticateAccessRequest(accessTokenRequest, session)
 
-		return nil, error, nil
+	if !authenticated {
+
+		return nil, error
 	}
 
-	session := &Session{
-		accessToken,
+	if session.AccessToken == nil {
+
+		session.AccessToken = server.generateToken(grant, AccessToken)
 	}
 
 	if createRefreshToken && server.Config.AllowRefresh {
 
+		session.RefreshToken = server.generateToken(grant, RefreshToken)
 	}
 
-	return accessToken, nil, session
+	if v, ok := grant.(PostProcessingGrant); ok {
+
+		v.ProcessSession(session)
+	}
+
+	go server.Config.SessionStorage.Save(session)
+
+	return session, nil
+}
+
+func (server *Server) generateToken(grant Grant, tokenType TokenType) *Token {
+
+	var expiration int64
+
+	if tokenType == AccessToken {
+
+		expiration = grant.AccessTokenExpiration()
+
+		if expiration == 0 {
+
+			expiration = server.Config.DefaultAccessTokenExpires
+		}
+	} else {
+
+		expiration = server.Config.DefaultRefreshTokenExpires
+	}
+
+	return &Token{
+		server.Config.TokenIdGenerator(),
+		time.Now().UTC().Add(time.Duration(expiration) * time.Second).Unix(),
+	}
 }
