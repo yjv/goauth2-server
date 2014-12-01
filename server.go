@@ -93,11 +93,9 @@ func (server *Server) GrantOauthSession(accessTokenRequest AccessTokenRequest) (
 		return nil, error
 	}
 
-	session := &Session{}
+	session, error := grant.GenerateSession(accessTokenRequest)
 
-	authenticated, createRefreshToken, error := grant.AuthenticateAccessRequest(accessTokenRequest, session)
-
-	if !authenticated {
+	if session == nil {
 
 		return nil, error
 	}
@@ -107,7 +105,7 @@ func (server *Server) GrantOauthSession(accessTokenRequest AccessTokenRequest) (
 		session.AccessToken = server.generateToken(grant, AccessToken)
 	}
 
-	if createRefreshToken && server.Config.AllowRefresh {
+	if server.Config.AllowRefresh && grant.SessionRefreshable(session) {
 
 		session.RefreshToken = server.generateToken(grant, RefreshToken)
 	}
