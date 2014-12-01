@@ -21,6 +21,7 @@ type AuthCode struct {
 }
 
 type Session struct {
+	Id string
 	AccessToken *Token
 	RefreshToken *Token
 	AuthCode *AuthCode
@@ -75,30 +76,4 @@ func (request *BasicAccessTokenRequest) Grant() string {
 func OwnerFromClient(client *Client) *Owner {
 
 	return &Owner{client.Id, client.Name}
-}
-
-func CopySession(source *Session) *Session {
-
-	destination := &Session{}
-	destination.AccessToken = source.AccessToken
-	destination.RefreshToken = source.RefreshToken
-	destination.AuthCode = source.AuthCode
-	destination.Scopes = make([]string, len(source.Scopes))
-
-	for key := range source.Scopes {
-
-		destination.Scopes[key] = source.Scopes[key]
-	}
-
-	destination.Client = source.Client
-	destination.Owner = source.Owner
-
-	destination.ExtraData = make(map[string]string)
-
-	for key := range source.ExtraData {
-
-		destination.ExtraData[key] = source.ExtraData[key]
-	}
-
-	return destination
 }
