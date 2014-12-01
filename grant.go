@@ -43,7 +43,7 @@ type ClientCredentialsGrant struct {
 
 func (grant *ClientCredentialsGrant) AuthenticateAccessRequest(accessTokenRequest AccessTokenRequest, session *Session) (bool, bool, error) {
 
-	client, error := authenticateClient(accessTokenRequest, grant.server.Config.ClientStorage)
+	client, error := AuthenticateClient(accessTokenRequest, grant.server.Config.ClientStorage)
 
 	if client == nil {
 
@@ -74,7 +74,7 @@ func (grant *PasswordGrant) AuthenticateAccessRequest(accessTokenRequest AccessT
 
 	var client *Client
 
-	if client, error := authenticateClient(accessTokenRequest, grant.server.Config.ClientStorage); client == nil {
+	if client, error := AuthenticateClient(accessTokenRequest, grant.server.Config.ClientStorage); client == nil {
 
 		return false, false, error
 	}
@@ -119,7 +119,7 @@ type RefreshTokenGrant struct {
 
 func (grant *RefreshTokenGrant) AuthenticateAccessRequest(accessTokenRequest AccessTokenRequest, session *Session) (bool, bool, error) {
 
-	client, error := authenticateClient(accessTokenRequest, grant.server.Config.ClientStorage)
+	client, error := AuthenticateClient(accessTokenRequest, grant.server.Config.ClientStorage)
 
 	if client == nil {
 
@@ -163,7 +163,7 @@ func (grant *RefreshTokenGrant) SetServer(server *Server) {
 	server.Config.AllowRefresh = true
 }
 
-func authenticateClient(accessTokenRequest AccessTokenRequest, storage ClientStorage) (*Client, error) {
+func AuthenticateClient(accessTokenRequest AccessTokenRequest, storage ClientStorage) (*Client, error) {
 
 	clientId, exists := accessTokenRequest.Get("client_id");
 

@@ -2,6 +2,7 @@ package oauth2server
 
 import (
 	"fmt"
+	"time"
 )
 
 type ClientStorage interface {
@@ -113,7 +114,17 @@ func (storage *InMemorySessionStorage) FindByAccessToken(accessToken string) (*S
 
 	if !ok {
 
-		return nil, fmt.Errorf("Session for access token %q not found", accessToken)
+		return nil, fmt.Errorf("Session not found")
+	}
+
+	if storage.isExpired(session.AccessToken) {
+
+		if storage.isExpired(session.RefreshToken) {
+
+			go storage.Delete(session)
+		}
+
+		return nil, fmt.Errorf("Refresh token is expired")
 	}
 
 	return session, nil
@@ -126,6 +137,12 @@ func (storage *InMemorySessionStorage) FindByRefreshToken(refreshToken string) (
 	if !ok {
 
 		return nil, fmt.Errorf("Session for refresh token %q not found", refreshToken)
+	}
+
+	if storage.isExpired(session.RefreshToken) {
+
+		go storage.Delete(session)
+		return nil, fmt.Errorf("Refresh token is expired")
 	}
 
 	return session, nil
@@ -145,6 +162,11 @@ func (storage *InMemorySessionStorage) Delete(session *Session) {
 
 	delete(storage.sessionsByAccessToken, session.AccessToken.Token)
 	delete(storage.sessionsByRefreshToken, session.RefreshToken.Token)
+}
+
+func (storage *InMemorySessionStorage) isExpired(token *Token) bool {
+
+	return token == nil || token.Expires < time.Now().UTC().Unix()
 }
 
 

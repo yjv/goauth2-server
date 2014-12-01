@@ -26,7 +26,6 @@ type Config struct {
 	DefaultAccessTokenExpires int64
 	DefaultRefreshTokenExpires int64
 	AllowRefresh bool
-	RotateRefreshTokens bool
 	TokenIdGenerator TokenIdGeneratorFunc
 	ClientStorage ClientStorage
 	OwnerStorage OwnerStorage
@@ -52,8 +51,7 @@ func NewConfig(clientStorage ClientStorage, ownerStorage OwnerStorage, sessionSt
 	return &Config{
 		3600, //1 hour
 		604800, //1 week
-		true,
-		true,
+		false,
 		GenerateTokenId,
 		clientStorage,
 		ownerStorage,
