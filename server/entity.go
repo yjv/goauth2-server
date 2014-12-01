@@ -1,4 +1,4 @@
-package oauth2server
+package server
 
 type Client struct {
 	Id string

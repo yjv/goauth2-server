@@ -1,4 +1,4 @@
-package oauth2server
+package server
 
 import (
 	"code.google.com/p/go-uuid/uuid"
