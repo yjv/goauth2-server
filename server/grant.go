@@ -5,7 +5,7 @@ import (
 )
 
 type Grant interface {
-	GenerateSession(accessTokenRequest AccessTokenRequest) (*Session, error)
+	GenerateSession(oauthSessionRequest OauthSessionRequest) (*Session, error)
 	Name() string
 	AccessTokenExpiration() int64
 	SetServer(server *Server)
@@ -47,9 +47,9 @@ type ClientCredentialsGrant struct {
 	BaseGrant
 }
 
-func (grant *ClientCredentialsGrant) GenerateSession(accessTokenRequest AccessTokenRequest) (*Session, error) {
+func (grant *ClientCredentialsGrant) GenerateSession(oauthSessionRequest OauthSessionRequest) (*Session, error) {
 
-	client, error := AuthenticateClient(accessTokenRequest, grant.server.ClientStorage())
+	client, error := AuthenticateClient(oauthSessionRequest, grant.server.ClientStorage())
 
 	if client == nil {
 
@@ -72,11 +72,11 @@ type PasswordGrant struct {
 	BaseGrant
 }
 
-func (grant *PasswordGrant) GenerateSession(accessTokenRequest AccessTokenRequest) (*Session, error) {
+func (grant *PasswordGrant) GenerateSession(oauthSessionRequest OauthSessionRequest) (*Session, error) {
 
 	var client *Client
 
-	if client, error := AuthenticateClient(accessTokenRequest, grant.server.ClientStorage()); client == nil {
+	if client, error := AuthenticateClient(oauthSessionRequest, grant.server.ClientStorage()); client == nil {
 
 		return nil, error
 	}
@@ -84,14 +84,14 @@ func (grant *PasswordGrant) GenerateSession(accessTokenRequest AccessTokenReques
 	session := &Session{}
 	session.Client = client
 
-	username, exists := accessTokenRequest.Get("username")
+	username, exists := oauthSessionRequest.Get("username")
 
 	if !exists {
 
 		return nil, errors.New("username must be set")
 	}
 
-	password, exists := accessTokenRequest.Get("password")
+	password, exists := oauthSessionRequest.Get("password")
 
 	if !exists {
 
@@ -125,16 +125,16 @@ type RefreshTokenGrant struct {
 	RotateRefreshTokens bool
 }
 
-func (grant *RefreshTokenGrant) GenerateSession(accessTokenRequest AccessTokenRequest) (*Session, error) {
+func (grant *RefreshTokenGrant) GenerateSession(oauthSessionRequest OauthSessionRequest) (*Session, error) {
 
-	client, error := AuthenticateClient(accessTokenRequest, grant.server.ClientStorage())
+	client, error := AuthenticateClient(oauthSessionRequest, grant.server.ClientStorage())
 
 	if client == nil {
 
 		return nil, error
 	}
 
-	refreshToken, exists := accessTokenRequest.Get("refresh_token")
+	refreshToken, exists := oauthSessionRequest.Get("refresh_token")
 
 	if !exists {
 
@@ -174,16 +174,16 @@ func (grant *RefreshTokenGrant) SetServer(server *Server) {
 	server.Config().AllowRefresh = true
 }
 
-func AuthenticateClient(accessTokenRequest AccessTokenRequest, storage ClientStorage) (*Client, error) {
+func AuthenticateClient(oauthSessionRequest OauthSessionRequest, storage ClientStorage) (*Client, error) {
 
-	clientId, exists := accessTokenRequest.Get("client_id")
+	clientId, exists := oauthSessionRequest.Get("client_id")
 
 	if !exists {
 
 		return nil, errors.New("client_id must be set")
 	}
 
-	clientSecret, exists := accessTokenRequest.Get("client_secret")
+	clientSecret, exists := oauthSessionRequest.Get("client_secret")
 
 	if !exists {
 

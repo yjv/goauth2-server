@@ -30,12 +30,12 @@ type Session struct {
 	ExtraData    map[string]string
 }
 
-type AccessTokenRequest interface {
+type OauthSessionRequest interface {
 	Grant() string
 	Get(key string) (string, bool)
 }
 
-type BasicAccessTokenRequest struct {
+type BasicOauthSessionRequest struct {
 	grant string
 	data  map[string]string
 }
@@ -47,7 +47,7 @@ const (
 	RefreshToken TokenType = "refresh"
 )
 
-func NewBasicAccessTokenRequest(grant string, data map[string]string) *BasicAccessTokenRequest {
+func NewBasicOauthSessionRequest(grant string, data map[string]string) *BasicOauthSessionRequest {
 
 	newData := make(map[string]string)
 
@@ -56,16 +56,16 @@ func NewBasicAccessTokenRequest(grant string, data map[string]string) *BasicAcce
 		newData[key] = value
 	}
 
-	return &BasicAccessTokenRequest{grant, newData}
+	return &BasicOauthSessionRequest{grant, newData}
 }
 
-func (request *BasicAccessTokenRequest) Get(name string) (string, bool) {
+func (request *BasicOauthSessionRequest) Get(name string) (string, bool) {
 
 	val, ok := request.data[name]
 	return val, ok
 }
 
-func (request *BasicAccessTokenRequest) Grant() string {
+func (request *BasicOauthSessionRequest) Grant() string {
 
 	return request.grant
 }

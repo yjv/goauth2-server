@@ -127,16 +127,16 @@ func (server *Server) Config() *Config {
 	return server.config
 }
 
-func (server *Server) GrantOauthSession(accessTokenRequest AccessTokenRequest) (*Session, error) {
+func (server *Server) GrantOauthSession(oauthSessionRequest OauthSessionRequest) (*Session, error) {
 
-	grant, error := server.GetGrant(accessTokenRequest.Grant())
+	grant, error := server.GetGrant(oauthSessionRequest.Grant())
 
 	if grant == nil {
 
 		return nil, error
 	}
 
-	session, error := grant.GenerateSession(accessTokenRequest)
+	session, error := grant.GenerateSession(oauthSessionRequest)
 
 	if session == nil {
 
