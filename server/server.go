@@ -10,10 +10,6 @@ import (
 
 type TokenIdGeneratorFunc func() string
 
-type TokenGenerator interface {
-	GenerateToken(serverConfig *Config) (*Token, error)
-}
-
 func GenerateTokenId() string {
 
 	token := uuid.New()
@@ -21,41 +17,61 @@ func GenerateTokenId() string {
 	return token
 }
 
+type TokenGenerator interface {
+	GenerateAccessToken(serverConfig *Config, grant Grant) *Token
+	GenerateRefreshToken(serverConfig *Config, grant Grant) *Token
+}
+
 type Config struct {
 
 	DefaultAccessTokenExpires int64
 	DefaultRefreshTokenExpires int64
 	AllowRefresh bool
-	TokenIdGenerator TokenIdGeneratorFunc
-	ClientStorage ClientStorage
-	OwnerStorage OwnerStorage
-	SessionStorage SessionStorage
 }
 
 type Server struct {
 
-	Config *Config
+	config *Config
 	grants map[string]Grant
+	tokenGenerator TokenGenerator
+	clientStorage ClientStorage
+	ownerStorage OwnerStorage
+	sessionStorage SessionStorage
 }
 
-func NewServer(config *Config) *Server {
+func NewServer(clientStorage ClientStorage, ownerStorage OwnerStorage, sessionStorage SessionStorage) *Server {
+
+	return NewServerWithTokenGenerator(
+		NewDefaultTokenGenerator(),
+		clientStorage,
+		ownerStorage,
+		sessionStorage,
+	)
+}
+
+func NewServerWithTokenGenerator(
+	tokenGenerator TokenGenerator,
+	clientStorage ClientStorage,
+	ownerStorage OwnerStorage,
+	sessionStorage SessionStorage,
+) *Server {
 
 	return &Server{
-		config,
+		NewConfig(),
 		make(map[string]Grant),
+		tokenGenerator,
+		clientStorage,
+		ownerStorage,
+		sessionStorage,
 	}
 }
 
-func NewConfig(clientStorage ClientStorage, ownerStorage OwnerStorage, sessionStorage SessionStorage) *Config {
+func NewConfig() *Config {
 
 	return &Config{
 		3600, //1 hour
 		604800, //1 week
 		false,
-		GenerateTokenId,
-		clientStorage,
-		ownerStorage,
-		sessionStorage,
 	}
 }
 
@@ -84,6 +100,36 @@ func (server *Server) GetGrant(name string) (Grant, error) {
 	return grant, nil
 }
 
+func (server *Server) Grants() map[string]Grant {
+
+	return server.grants
+}
+
+func (server *Server) TokenGenerator() TokenGenerator {
+
+	return server.tokenGenerator
+}
+
+func (server *Server) ClientStorage() ClientStorage {
+
+	return server.clientStorage
+}
+
+func (server *Server) OwnerStorage() OwnerStorage {
+
+	return server.ownerStorage
+}
+
+func (server *Server) SessionStorage() SessionStorage {
+
+	return server.sessionStorage
+}
+
+func (server *Server) Config() *Config {
+
+	return server.config
+}
+
 func (server *Server) GrantOauthSession(accessTokenRequest AccessTokenRequest) (*Session, error) {
 
 	grant, error := server.GetGrant(accessTokenRequest.Grant())
@@ -102,12 +148,12 @@ func (server *Server) GrantOauthSession(accessTokenRequest AccessTokenRequest) (
 
 	if session.AccessToken == nil {
 
-		session.AccessToken = server.generateToken(grant, AccessToken)
+		session.AccessToken = server.tokenGenerator.GenerateAccessToken(server.config, grant)
 	}
 
-	if server.Config.AllowRefresh && grant.SessionRefreshable(session) {
+	if server.config.AllowRefresh && grant.ShouldGenerateRefreshToken(session) {
 
-		session.RefreshToken = server.generateToken(grant, RefreshToken)
+		session.RefreshToken = server.tokenGenerator.GenerateRefreshToken(server.config, grant)
 	}
 
 	if v, ok := grant.(PostProcessingGrant); ok {
@@ -115,30 +161,50 @@ func (server *Server) GrantOauthSession(accessTokenRequest AccessTokenRequest) (
 		v.ProcessSession(session)
 	}
 
-	go server.Config.SessionStorage.Save(session)
+	go server.sessionStorage.Save(session)
 
 	return session, nil
 }
 
-func (server *Server) generateToken(grant Grant, tokenType TokenType) *Token {
+type DefaultTokenGenerator struct {
+	tokenIdGenerator TokenIdGeneratorFunc
+}
+
+func (generator *DefaultTokenGenerator) GenerateAccessToken(config *Config, grant Grant) *Token {
 
 	var expiration int64
 
-	if tokenType == AccessToken {
+	expiration = grant.AccessTokenExpiration()
 
-		expiration = grant.AccessTokenExpiration()
+	if expiration == 0 {
 
-		if expiration == 0 {
-
-			expiration = server.Config.DefaultAccessTokenExpires
-		}
-	} else {
-
-		expiration = server.Config.DefaultRefreshTokenExpires
+		expiration = config.DefaultAccessTokenExpires
 	}
 
 	return &Token{
-		server.Config.TokenIdGenerator(),
+		generator.tokenIdGenerator(),
 		time.Now().UTC().Add(time.Duration(expiration) * time.Second).Unix(),
 	}
+}
+
+func (generator *DefaultTokenGenerator) GenerateRefreshToken(config *Config, grant Grant) *Token {
+
+	var expiration int64
+
+	expiration = config.DefaultRefreshTokenExpires
+
+	return &Token{
+		generator.tokenIdGenerator(),
+		time.Now().UTC().Add(time.Duration(expiration) * time.Second).Unix(),
+	}
+}
+
+func (generator *DefaultTokenGenerator) TokenIdGenerator() TokenIdGeneratorFunc {
+
+	return generator.tokenIdGenerator
+}
+
+func NewDefaultTokenGenerator() *DefaultTokenGenerator {
+
+	return &DefaultTokenGenerator { GenerateTokenId }
 }

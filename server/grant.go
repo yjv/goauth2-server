@@ -9,7 +9,7 @@ type Grant interface {
 	Name() string
 	AccessTokenExpiration() int64
 	SetServer(server *Server)
-	SessionRefreshable(session *Session) bool
+	ShouldGenerateRefreshToken(session *Session) bool
 }
 
 type PostProcessingGrant interface {
@@ -38,7 +38,7 @@ func (grant *BaseGrant) SetServer(server *Server) {
 	grant.server = server
 }
 
-func (grant *BaseGrant) SessionRefreshable(session *Session) bool {
+func (grant *BaseGrant) ShouldGenerateRefreshToken(session *Session) bool {
 
 	return false
 }
@@ -49,7 +49,7 @@ type ClientCredentialsGrant struct {
 
 func (grant *ClientCredentialsGrant) GenerateSession(accessTokenRequest AccessTokenRequest) (*Session, error) {
 
-	client, error := AuthenticateClient(accessTokenRequest, grant.server.Config.ClientStorage)
+	client, error := AuthenticateClient(accessTokenRequest, grant.server.ClientStorage())
 
 	if client == nil {
 
@@ -76,7 +76,7 @@ func (grant *PasswordGrant) GenerateSession(accessTokenRequest AccessTokenReques
 
 	var client *Client
 
-	if client, error := AuthenticateClient(accessTokenRequest, grant.server.Config.ClientStorage); client == nil {
+	if client, error := AuthenticateClient(accessTokenRequest, grant.server.ClientStorage()); client == nil {
 
 		return nil, error
 	}
@@ -100,7 +100,7 @@ func (grant *PasswordGrant) GenerateSession(accessTokenRequest AccessTokenReques
 
 	var owner *Owner
 
-	if owner, error := grant.server.Config.OwnerStorage.FindByOwnerUsernameAndPassword(username, password); owner == nil {
+	if owner, error := grant.server.OwnerStorage().FindByOwnerUsernameAndPassword(username, password); owner == nil {
 
 		return nil, error
 	}
@@ -115,7 +115,7 @@ func (grant *PasswordGrant) Name() string {
 	return "password"
 }
 
-func (grant *PasswordGrant) SessionRefreshable(session *Session) bool {
+func (grant *PasswordGrant) ShouldGenerateRefreshToken(session *Session) bool {
 
 	return true
 }
@@ -127,7 +127,7 @@ type RefreshTokenGrant struct {
 
 func (grant *RefreshTokenGrant) GenerateSession(accessTokenRequest AccessTokenRequest) (*Session, error) {
 
-	client, error := AuthenticateClient(accessTokenRequest, grant.server.Config.ClientStorage)
+	client, error := AuthenticateClient(accessTokenRequest, grant.server.ClientStorage())
 
 	if client == nil {
 
@@ -141,7 +141,7 @@ func (grant *RefreshTokenGrant) GenerateSession(accessTokenRequest AccessTokenRe
 		return nil, errors.New("refresh_token must be set")
 	}
 
-	session, error := grant.server.Config.SessionStorage.FindByRefreshToken(refreshToken)
+	session, error := grant.server.SessionStorage().FindByRefreshToken(refreshToken)
 
 	if session == nil {
 
@@ -163,7 +163,7 @@ func (grant *RefreshTokenGrant) Name() string {
 	return "refresh_token"
 }
 
-func (grant *RefreshTokenGrant) SessionRefreshable(session *Session) bool {
+func (grant *RefreshTokenGrant) ShouldGenerateRefreshToken(session *Session) bool {
 
 	return grant.RotateRefreshTokens
 }
@@ -171,7 +171,7 @@ func (grant *RefreshTokenGrant) SessionRefreshable(session *Session) bool {
 func (grant *RefreshTokenGrant) SetServer(server *Server) {
 
 	grant.server = server
-	server.Config.AllowRefresh = true
+	server.Config().AllowRefresh = true
 }
 
 func AuthenticateClient(accessTokenRequest AccessTokenRequest, storage ClientStorage) (*Client, error) {
