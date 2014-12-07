@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-
 type TokenIdGeneratorFunc func() string
 
 func GenerateTokenId() string {
@@ -23,19 +22,17 @@ type TokenGenerator interface {
 }
 
 type Config struct {
-
-	DefaultAccessTokenExpires int64
+	DefaultAccessTokenExpires  int64
 	DefaultRefreshTokenExpires int64
-	AllowRefresh bool
+	AllowRefresh               bool
 }
 
 type Server struct {
-
-	config *Config
-	grants map[string]Grant
+	config         *Config
+	grants         map[string]Grant
 	tokenGenerator TokenGenerator
-	clientStorage ClientStorage
-	ownerStorage OwnerStorage
+	clientStorage  ClientStorage
+	ownerStorage   OwnerStorage
 	sessionStorage SessionStorage
 }
 
@@ -69,7 +66,7 @@ func NewServerWithTokenGenerator(
 func NewConfig() *Config {
 
 	return &Config{
-		3600, //1 hour
+		3600,   //1 hour
 		604800, //1 week
 		false,
 	}
@@ -93,7 +90,7 @@ func (server *Server) GetGrant(name string) (Grant, error) {
 
 	if !server.HasGrant(name) {
 
-		return nil, fmt.Errorf("The grant %q was not found", name);
+		return nil, fmt.Errorf("The grant %q was not found", name)
 	}
 
 	grant := server.grants[name]
@@ -206,5 +203,5 @@ func (generator *DefaultTokenGenerator) TokenIdGenerator() TokenIdGeneratorFunc 
 
 func NewDefaultTokenGenerator() *DefaultTokenGenerator {
 
-	return &DefaultTokenGenerator { GenerateTokenId }
+	return &DefaultTokenGenerator{GenerateTokenId}
 }

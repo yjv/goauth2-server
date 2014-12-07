@@ -1,52 +1,49 @@
 package server
 
 type Client struct {
-	Id string
-	Name string
+	Id          string
+	Name        string
 	RedirectUri string
 }
 
 type Owner struct {
-	Id string
+	Id   string
 	Name string
 }
 
 type Token struct {
-	Token string
+	Token   string
 	Expires int64
 }
 
 type AuthCode struct {
-
 }
 
 type Session struct {
-	Id string
-	AccessToken *Token
+	Id           string
+	AccessToken  *Token
 	RefreshToken *Token
-	AuthCode *AuthCode
-	Scopes []string
-	Client *Client
-	Owner *Owner
-	ExtraData map[string]string
+	AuthCode     *AuthCode
+	Scopes       []string
+	Client       *Client
+	Owner        *Owner
+	ExtraData    map[string]string
 }
 
 type AccessTokenRequest interface {
-
 	Grant() string
 	Get(key string) (string, bool)
 }
 
 type BasicAccessTokenRequest struct {
-
 	grant string
-	data map[string]string
+	data  map[string]string
 }
 
 type TokenType string
 
 const (
-	AccessToken TokenType = "access"
+	AccessToken  TokenType = "access"
 	RefreshToken TokenType = "refresh"
 )
 

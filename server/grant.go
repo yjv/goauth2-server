@@ -19,7 +19,7 @@ type PostProcessingGrant interface {
 
 type BaseGrant struct {
 	accessTokenExpiration int64
-	server *Server
+	server                *Server
 }
 
 func (grant *BaseGrant) AccessTokenExpiration() int64 {
@@ -84,7 +84,7 @@ func (grant *PasswordGrant) GenerateSession(accessTokenRequest AccessTokenReques
 	session := &Session{}
 	session.Client = client
 
-	username, exists := accessTokenRequest.Get("username");
+	username, exists := accessTokenRequest.Get("username")
 
 	if !exists {
 
@@ -134,7 +134,7 @@ func (grant *RefreshTokenGrant) GenerateSession(accessTokenRequest AccessTokenRe
 		return nil, error
 	}
 
-	refreshToken, exists := accessTokenRequest.Get("refresh_token");
+	refreshToken, exists := accessTokenRequest.Get("refresh_token")
 
 	if !exists {
 
@@ -150,7 +150,7 @@ func (grant *RefreshTokenGrant) GenerateSession(accessTokenRequest AccessTokenRe
 
 	session.AccessToken = nil
 
-	if (grant.RotateRefreshTokens) {
+	if grant.RotateRefreshTokens {
 
 		session.RefreshToken = nil
 	}
@@ -176,7 +176,7 @@ func (grant *RefreshTokenGrant) SetServer(server *Server) {
 
 func AuthenticateClient(accessTokenRequest AccessTokenRequest, storage ClientStorage) (*Client, error) {
 
-	clientId, exists := accessTokenRequest.Get("client_id");
+	clientId, exists := accessTokenRequest.Get("client_id")
 
 	if !exists {
 

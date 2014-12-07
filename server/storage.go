@@ -6,35 +6,32 @@ import (
 )
 
 type ClientStorage interface {
-
 	FindClientByClientId(clientId string) (*Client, error)
 	FindByClientIdAndSecret(clientId string, clientSecret string) (*Client, error)
 }
 
 type OwnerStorage interface {
-
 	FindByOwnerUsername(username string) (*Owner, error)
 	FindByOwnerUsernameAndPassword(username string, password string) (*Owner, error)
 }
 
 type InMemoryOwnerClientStorage struct {
-
-	ownersByUsername map[string]*Owner
+	ownersByUsername            map[string]*Owner
 	ownersByUsernameAndPassword map[string]*Owner
-	clientsByClientId map[string]*Client
-	clientsByClientIdAndSecret map[string]*Client
+	clientsByClientId           map[string]*Client
+	clientsByClientIdAndSecret  map[string]*Client
 }
 
 func (storage *InMemoryOwnerClientStorage) AddClient(clientId string, clientSecret string, client *Client) *InMemoryOwnerClientStorage {
 
 	storage.clientsByClientId[clientId] = client
-	storage.clientsByClientIdAndSecret[clientId + ":" + clientSecret] = client
+	storage.clientsByClientIdAndSecret[clientId+":"+clientSecret] = client
 	return storage
 }
 func (storage *InMemoryOwnerClientStorage) AddOwner(username string, password string, owner *Owner) *InMemoryOwnerClientStorage {
 
 	storage.ownersByUsername[username] = owner
-	storage.ownersByUsernameAndPassword[username + ":" + password] = owner
+	storage.ownersByUsernameAndPassword[username+":"+password] = owner
 	return storage
 }
 
@@ -52,7 +49,7 @@ func (storage *InMemoryOwnerClientStorage) FindClientByClientId(clientId string)
 
 func (storage *InMemoryOwnerClientStorage) FindByClientIdAndSecret(clientId string, clientSecret string) (*Client, error) {
 
-	client, ok := storage.clientsByClientIdAndSecret[clientId + ":" + clientSecret]
+	client, ok := storage.clientsByClientIdAndSecret[clientId+":"+clientSecret]
 
 	if !ok {
 
@@ -75,7 +72,7 @@ func (storage *InMemoryOwnerClientStorage) FindByOwnerUsername(username string) 
 
 func (storage *InMemoryOwnerClientStorage) FindByOwnerUsernameAndPassword(username string, password string) (*Owner, error) {
 
-	owner, ok := storage.ownersByUsernameAndPassword[username + ":" + password]
+	owner, ok := storage.ownersByUsernameAndPassword[username+":"+password]
 
 	if !ok {
 
@@ -96,7 +93,6 @@ func NewInMemoryOwnerClientStorage() *InMemoryOwnerClientStorage {
 }
 
 type SessionStorage interface {
-
 	FindByAccessToken(accessToken string) (*Session, error)
 	FindByRefreshToken(refreshToken string) (*Session, error)
 	Save(session *Session)
@@ -104,7 +100,7 @@ type SessionStorage interface {
 }
 
 type InMemorySessionStorage struct {
-	sessionsByAccessToken map[string]*Session
+	sessionsByAccessToken  map[string]*Session
 	sessionsByRefreshToken map[string]*Session
 }
 
@@ -168,7 +164,6 @@ func (storage *InMemorySessionStorage) isExpired(token *Token) bool {
 
 	return token == nil || token.Expires < time.Now().UTC().Unix()
 }
-
 
 func NewInMemorySessionStorage() *InMemorySessionStorage {
 
