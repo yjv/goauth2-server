@@ -1,31 +1,8 @@
 package server
 
 import (
-	"code.google.com/p/go-uuid/uuid"
-	"encoding/base64"
 	"fmt"
-	"time"
 )
-
-type TokenIdGeneratorFunc func() string
-
-func GenerateTokenId() string {
-
-	token := uuid.New()
-	token = base64.StdEncoding.EncodeToString([]byte(token))
-	return token
-}
-
-type TokenGenerator interface {
-	GenerateAccessToken(serverConfig *Config, grant Grant) *Token
-	GenerateRefreshToken(serverConfig *Config, grant Grant) *Token
-}
-
-type Config struct {
-	DefaultAccessTokenExpires  int64
-	DefaultRefreshTokenExpires int64
-	AllowRefresh               bool
-}
 
 type Server struct {
 	config         *Config
@@ -60,15 +37,6 @@ func NewServerWithTokenGenerator(
 		clientStorage,
 		ownerStorage,
 		sessionStorage,
-	}
-}
-
-func NewConfig() *Config {
-
-	return &Config{
-		3600,   //1 hour
-		604800, //1 week
-		false,
 	}
 }
 
@@ -161,47 +129,4 @@ func (server *Server) GrantOauthSession(oauthSessionRequest OauthSessionRequest)
 	go server.sessionStorage.Save(session)
 
 	return session, nil
-}
-
-type DefaultTokenGenerator struct {
-	tokenIdGenerator TokenIdGeneratorFunc
-}
-
-func (generator *DefaultTokenGenerator) GenerateAccessToken(config *Config, grant Grant) *Token {
-
-	var expiration int64
-
-	expiration = grant.AccessTokenExpiration()
-
-	if expiration == 0 {
-
-		expiration = config.DefaultAccessTokenExpires
-	}
-
-	return &Token{
-		generator.tokenIdGenerator(),
-		time.Now().UTC().Add(time.Duration(expiration) * time.Second).Unix(),
-	}
-}
-
-func (generator *DefaultTokenGenerator) GenerateRefreshToken(config *Config, grant Grant) *Token {
-
-	var expiration int64
-
-	expiration = config.DefaultRefreshTokenExpires
-
-	return &Token{
-		generator.tokenIdGenerator(),
-		time.Now().UTC().Add(time.Duration(expiration) * time.Second).Unix(),
-	}
-}
-
-func (generator *DefaultTokenGenerator) TokenIdGenerator() TokenIdGeneratorFunc {
-
-	return generator.tokenIdGenerator
-}
-
-func NewDefaultTokenGenerator() *DefaultTokenGenerator {
-
-	return &DefaultTokenGenerator{GenerateTokenId}
 }
