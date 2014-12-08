@@ -13,33 +13,6 @@ type Server struct {
 	sessionStorage SessionStorage
 }
 
-func NewServer(clientStorage ClientStorage, ownerStorage OwnerStorage, sessionStorage SessionStorage) *Server {
-
-	return NewServerWithTokenGenerator(
-		NewDefaultTokenGenerator(),
-		clientStorage,
-		ownerStorage,
-		sessionStorage,
-	)
-}
-
-func NewServerWithTokenGenerator(
-	tokenGenerator TokenGenerator,
-	clientStorage ClientStorage,
-	ownerStorage OwnerStorage,
-	sessionStorage SessionStorage,
-) *Server {
-
-	return &Server{
-		NewConfig(),
-		make(map[string]Grant),
-		tokenGenerator,
-		clientStorage,
-		ownerStorage,
-		sessionStorage,
-	}
-}
-
 func (server *Server) AddGrant(grant Grant) *Server {
 
 	server.grants[grant.Name()] = grant
@@ -130,3 +103,66 @@ func (server *Server) GrantOauthSession(oauthSessionRequest OauthSessionRequest)
 
 	return session, nil
 }
+
+func NewServer(clientStorage ClientStorage, ownerStorage OwnerStorage, sessionStorage SessionStorage) *Server {
+
+	return NewServerWithConfigAndTokenGenerator(
+		NewConfig(),
+		NewDefaultTokenGenerator(),
+		clientStorage,
+		ownerStorage,
+		sessionStorage,
+	)
+}
+
+func NewServerWithTokenGenerator(
+	tokenGenerator TokenGenerator,
+	clientStorage ClientStorage,
+	ownerStorage OwnerStorage,
+	sessionStorage SessionStorage,
+) *Server {
+
+	return NewServerWithConfigAndTokenGenerator(
+		NewConfig(),
+		tokenGenerator,
+		clientStorage,
+		ownerStorage,
+		sessionStorage,
+	)
+}
+
+func NewServerWithConfig(
+	config *Config,
+	clientStorage ClientStorage,
+	ownerStorage OwnerStorage,
+	sessionStorage SessionStorage,
+) *Server {
+
+return NewServerWithConfigAndTokenGenerator(
+	config,
+	NewDefaultTokenGenerator(),
+	clientStorage,
+	ownerStorage,
+	sessionStorage,
+	)
+}
+
+func NewServerWithConfigAndTokenGenerator(
+	config *Config,
+	tokenGenerator TokenGenerator,
+	clientStorage ClientStorage,
+	ownerStorage OwnerStorage,
+	sessionStorage SessionStorage,
+) *Server {
+
+	return &Server{
+		config,
+		make(map[string]Grant),
+		tokenGenerator,
+		clientStorage,
+		ownerStorage,
+		sessionStorage,
+	}
+}
+
+
