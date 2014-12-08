@@ -16,6 +16,10 @@ type Token struct {
 	Expires int64
 }
 
+const (
+	NoExpiration int64 = -1
+)
+
 type AuthCode struct {
 }
 
@@ -39,13 +43,6 @@ type BasicOauthSessionRequest struct {
 	grant string
 	data  map[string]string
 }
-
-type TokenType string
-
-const (
-	AccessToken  TokenType = "access"
-	RefreshToken TokenType = "refresh"
-)
 
 func NewBasicOauthSessionRequest(grant string, data map[string]string) *BasicOauthSessionRequest {
 
