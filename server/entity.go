@@ -67,7 +67,7 @@ func (request *BasicOauthSessionRequest) Grant() string {
 	return request.grant
 }
 
-func OwnerFromClient(client *Client) *Owner {
+func NewOwnerFromClient(client *Client) *Owner {
 
 	return &Owner{client.Id, client.Name}
 }

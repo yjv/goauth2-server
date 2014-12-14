@@ -58,7 +58,7 @@ func (grant *ClientCredentialsGrant) GenerateSession(oauthSessionRequest OauthSe
 
 	session := &Session{}
 	session.Client = client
-	session.Owner = OwnerFromClient(client)
+	session.Owner = NewOwnerFromClient(client)
 
 	return session, nil
 }
