@@ -21,21 +21,10 @@ func (server *Server) AddGrant(grant Grant) *Server {
 	return server
 }
 
-func (server *Server) HasGrant(name string) bool {
+func (server *Server) GetGrant(name string) (Grant, bool) {
 
-	_, ok := server.grants[name]
-	return ok
-}
-
-func (server *Server) GetGrant(name string) (Grant, error) {
-
-	if !server.HasGrant(name) {
-
-		return nil, fmt.Errorf("The grant %q was not found", name)
-	}
-
-	grant := server.grants[name]
-	return grant, nil
+	grant, ok := server.grants[name]
+	return grant, ok
 }
 
 func (server *Server) Grants() map[string]Grant {
@@ -70,11 +59,11 @@ func (server *Server) Config() *Config {
 
 func (server *Server) GrantOauthSession(oauthSessionRequest OauthSessionRequest) (*Session, error) {
 
-	grant, error := server.GetGrant(oauthSessionRequest.Grant())
+	grant, ok := server.GetGrant(oauthSessionRequest.Grant())
 
-	if grant == nil {
+	if !ok {
 
-		return nil, error
+		return nil, fmt.Errorf("grant named %s couldnt be found", oauthSessionRequest.Grant())
 	}
 
 	session, error := grant.GenerateSession(oauthSessionRequest)

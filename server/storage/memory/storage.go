@@ -83,7 +83,6 @@ func NewMemoryOwnerClientStorage() *MemoryOwnerClientStorage {
 	}
 }
 
-
 type MemorySessionStorage struct {
 	sessionsByAccessToken  map[string]*server.Session
 	sessionsByRefreshToken map[string]*server.Session

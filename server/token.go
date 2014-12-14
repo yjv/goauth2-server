@@ -10,9 +10,7 @@ type TokenIdGeneratorFunc func() string
 
 func GenerateTokenId() string {
 
-	token := uuid.New()
-	token = base64.StdEncoding.EncodeToString([]byte(token))
-	return token
+	return base64.StdEncoding.EncodeToString([]byte(uuid.New()))
 }
 
 type TokenGenerator interface {
@@ -61,4 +59,9 @@ func (generator *DefaultTokenGenerator) TokenIdGenerator() TokenIdGeneratorFunc 
 func NewDefaultTokenGenerator() *DefaultTokenGenerator {
 
 	return &DefaultTokenGenerator{GenerateTokenId}
+}
+
+func NewDefaultTokenGeneratorWithGeneratorFunc(generatorFunc TokenIdGeneratorFunc) *DefaultTokenGenerator {
+
+	return &DefaultTokenGenerator{generatorFunc}
 }
