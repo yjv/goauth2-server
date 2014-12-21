@@ -331,7 +331,7 @@ func (storage *MockSessionStorage) Delete(session *Session) {
 
 type MockGrant struct {
 	mock.Mock
-	Server *Server
+	Server Server
 }
 
 func (grant *MockGrant) GenerateSession(oauthSessionRequest OauthSessionRequest) (*Session, error) {
@@ -351,7 +351,7 @@ func (grant *MockGrant) AccessTokenExpiration() int64 {
 	return grant.Mock.Called().Get(0).(int64)
 }
 
-func (grant *MockGrant) SetServer(server *Server) {
+func (grant *MockGrant) SetServer(server Server) {
 
 	grant.Server = server
 }

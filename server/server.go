@@ -4,7 +4,17 @@ import (
 	"fmt"
 )
 
-type Server struct {
+type Server interface {
+	GetGrant(name string) (Grant, bool)
+	TokenGenerator() TokenGenerator
+	ClientStorage() ClientStorage
+	OwnerStorage() OwnerStorage
+	SessionStorage() SessionStorage
+	Config() *Config
+	GrantOauthSession(oauthSessionRequest OauthSessionRequest) (*Session, error)
+}
+
+type DefaultServer struct {
 	config         *Config
 	grants         map[string]Grant
 	tokenGenerator TokenGenerator
@@ -13,7 +23,7 @@ type Server struct {
 	sessionStorage SessionStorage
 }
 
-func (server *Server) AddGrant(grant Grant) *Server {
+func (server *DefaultServer) AddGrant(grant Grant) *DefaultServer {
 
 	server.grants[grant.Name()] = grant
 	grant.SetServer(server)
@@ -21,43 +31,43 @@ func (server *Server) AddGrant(grant Grant) *Server {
 	return server
 }
 
-func (server *Server) GetGrant(name string) (Grant, bool) {
+func (server *DefaultServer) GetGrant(name string) (Grant, bool) {
 
 	grant, ok := server.grants[name]
 	return grant, ok
 }
 
-func (server *Server) Grants() map[string]Grant {
+func (server *DefaultServer) Grants() map[string]Grant {
 
 	return server.grants
 }
 
-func (server *Server) TokenGenerator() TokenGenerator {
+func (server *DefaultServer) TokenGenerator() TokenGenerator {
 
 	return server.tokenGenerator
 }
 
-func (server *Server) ClientStorage() ClientStorage {
+func (server *DefaultServer) ClientStorage() ClientStorage {
 
 	return server.clientStorage
 }
 
-func (server *Server) OwnerStorage() OwnerStorage {
+func (server *DefaultServer) OwnerStorage() OwnerStorage {
 
 	return server.ownerStorage
 }
 
-func (server *Server) SessionStorage() SessionStorage {
+func (server *DefaultServer) SessionStorage() SessionStorage {
 
 	return server.sessionStorage
 }
 
-func (server *Server) Config() *Config {
+func (server *DefaultServer) Config() *Config {
 
 	return server.config
 }
 
-func (server *Server) GrantOauthSession(oauthSessionRequest OauthSessionRequest) (*Session, error) {
+func (server *DefaultServer) GrantOauthSession(oauthSessionRequest OauthSessionRequest) (*Session, error) {
 
 	grant, ok := server.GetGrant(oauthSessionRequest.Grant())
 
@@ -93,7 +103,7 @@ func (server *Server) GrantOauthSession(oauthSessionRequest OauthSessionRequest)
 	return session, nil
 }
 
-func NewServer(clientStorage ClientStorage, ownerStorage OwnerStorage, sessionStorage SessionStorage) *Server {
+func NewServer(clientStorage ClientStorage, ownerStorage OwnerStorage, sessionStorage SessionStorage) *DefaultServer {
 
 	return NewServerWithConfigAndTokenGenerator(
 		NewConfig(),
@@ -109,7 +119,7 @@ func NewServerWithTokenGenerator(
 	clientStorage ClientStorage,
 	ownerStorage OwnerStorage,
 	sessionStorage SessionStorage,
-) *Server {
+) *DefaultServer {
 
 	return NewServerWithConfigAndTokenGenerator(
 		NewConfig(),
@@ -125,14 +135,14 @@ func NewServerWithConfig(
 	clientStorage ClientStorage,
 	ownerStorage OwnerStorage,
 	sessionStorage SessionStorage,
-) *Server {
+) *DefaultServer {
 
-return NewServerWithConfigAndTokenGenerator(
-	config,
-	NewDefaultTokenGenerator(),
-	clientStorage,
-	ownerStorage,
-	sessionStorage,
+	return NewServerWithConfigAndTokenGenerator(
+		config,
+		NewDefaultTokenGenerator(),
+		clientStorage,
+		ownerStorage,
+		sessionStorage,
 	)
 }
 
@@ -142,9 +152,9 @@ func NewServerWithConfigAndTokenGenerator(
 	clientStorage ClientStorage,
 	ownerStorage OwnerStorage,
 	sessionStorage SessionStorage,
-) *Server {
+) *DefaultServer {
 
-	return &Server{
+	return &DefaultServer{
 		config,
 		make(map[string]Grant),
 		tokenGenerator,
@@ -153,5 +163,3 @@ func NewServerWithConfigAndTokenGenerator(
 		sessionStorage,
 	}
 }
-
-

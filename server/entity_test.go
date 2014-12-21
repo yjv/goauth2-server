@@ -39,5 +39,5 @@ func TestOwnerFromClient(t *testing.T) {
 	assert.Equal(t, &Owner{
 		"id",
 		"name",
-	}, OwnerFromClient(client))
+	}, NewOwnerFromClient(client))
 }

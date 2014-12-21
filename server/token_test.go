@@ -54,12 +54,11 @@ func GeneratorFuncMock() string {
 }
 
 type TestGrant struct {
-
-	Session *Session
-	Error error
-	AccessTokenExpirationValue int64
+	Session                         *Session
+	Error                           error
+	AccessTokenExpirationValue      int64
 	ShouldGenerateRefreshTokenValue bool
-	Server *Server
+	Server                          Server
 }
 
 func (grant *TestGrant) GenerateSession(oauthSessionRequest OauthSessionRequest) (*Session, error) {
@@ -77,7 +76,7 @@ func (grant *TestGrant) AccessTokenExpiration() int64 {
 	return grant.AccessTokenExpirationValue
 }
 
-func (grant *TestGrant) SetServer(server *Server) {
+func (grant *TestGrant) SetServer(server Server) {
 
 	grant.Server = server
 }

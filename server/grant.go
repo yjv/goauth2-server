@@ -8,7 +8,7 @@ type Grant interface {
 	GenerateSession(oauthSessionRequest OauthSessionRequest) (*Session, error)
 	Name() string
 	AccessTokenExpiration() int64
-	SetServer(server *Server)
+	SetServer(server Server)
 	ShouldGenerateRefreshToken(session *Session) bool
 }
 
@@ -19,7 +19,7 @@ type PostProcessingGrant interface {
 
 type BaseGrant struct {
 	accessTokenExpiration int64
-	server                *Server
+	server                Server
 }
 
 func (grant *BaseGrant) AccessTokenExpiration() int64 {
@@ -27,13 +27,7 @@ func (grant *BaseGrant) AccessTokenExpiration() int64 {
 	return grant.accessTokenExpiration
 }
 
-func (grant *BaseGrant) SetAccessTokenExpiration(expiration int64) *BaseGrant {
-
-	grant.accessTokenExpiration = expiration
-	return grant
-}
-
-func (grant *BaseGrant) SetServer(server *Server) {
+func (grant *BaseGrant) SetServer(server Server) {
 
 	grant.server = server
 }
@@ -168,7 +162,7 @@ func (grant *RefreshTokenGrant) ShouldGenerateRefreshToken(session *Session) boo
 	return grant.RotateRefreshTokens
 }
 
-func (grant *RefreshTokenGrant) SetServer(server *Server) {
+func (grant *RefreshTokenGrant) SetServer(server Server) {
 
 	grant.server = server
 	server.Config().AllowRefresh = true
