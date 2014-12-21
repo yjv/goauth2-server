@@ -1,10 +1,10 @@
 package server
 
 import (
-	"testing"
 	"errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"testing"
 )
 
 func TestServerGettersAndGrantManagement(t *testing.T) {

@@ -1,9 +1,9 @@
 package server
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestNewDefaultTokenGenerator(t *testing.T) {
