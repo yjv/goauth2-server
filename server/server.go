@@ -1,9 +1,5 @@
 package server
 
-import (
-	"fmt"
-)
-
 type Server interface {
 	GetGrant(name string) (Grant, bool)
 	TokenGenerator() TokenGenerator
@@ -11,7 +7,7 @@ type Server interface {
 	OwnerStorage() OwnerStorage
 	SessionStorage() SessionStorage
 	Config() *Config
-	GrantOauthSession(oauthSessionRequest OauthSessionRequest) (*Session, error)
+	GrantOauthSession(oauthSessionRequest OauthSessionRequest) (*Session, OauthError)
 }
 
 type DefaultServer struct {
@@ -67,20 +63,28 @@ func (server *DefaultServer) Config() *Config {
 	return server.config
 }
 
-func (server *DefaultServer) GrantOauthSession(oauthSessionRequest OauthSessionRequest) (*Session, error) {
+func (server *DefaultServer) GrantOauthSession(oauthSessionRequest OauthSessionRequest) (*Session, OauthError) {
 
 	grant, ok := server.GetGrant(oauthSessionRequest.Grant())
 
 	if !ok {
 
-		return nil, fmt.Errorf("grant named %s couldnt be found", oauthSessionRequest.Grant())
+		return nil, &GrantNotFoundError{oauthSessionRequest.Grant()}
 	}
 
 	session, error := grant.GenerateSession(oauthSessionRequest)
 
 	if session == nil {
 
-		return nil, error
+		var returnedError OauthError
+		var ok bool
+
+		if returnedError, ok = error.(OauthError); !ok {
+
+			returnedError = &UnexpectedError{error}
+		}
+
+		return nil, returnedError
 	}
 
 	if session.AccessToken == nil {
@@ -98,7 +102,7 @@ func (server *DefaultServer) GrantOauthSession(oauthSessionRequest OauthSessionR
 		v.ProcessSession(session)
 	}
 
-	go server.sessionStorage.Save(session)
+	go server.sessionStorage.SaveSession(session)
 
 	return session, nil
 }

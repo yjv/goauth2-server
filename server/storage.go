@@ -1,18 +1,24 @@
 package server
 
 type ClientStorage interface {
-	FindClientByClientId(clientId string) (*Client, error)
-	FindByClientIdAndSecret(clientId string, clientSecret string) (*Client, error)
+	FindClientById(clientId string) (*Client, error)
+	FindClientByIdAndSecret(clientId string, clientSecret string) (*Client, error)
+	RefreshClient(client *Client) (*Client, error)
 }
 
 type OwnerStorage interface {
-	FindByOwnerUsername(username string) (*Owner, error)
-	FindByOwnerUsernameAndPassword(username string, password string) (*Owner, error)
+	FindOwnerByUsername(username string) (*Owner, error)
+	FindOwnerByUsernameAndPassword(username string, password string) (*Owner, error)
+	RefreshOwner(owner *Owner) (*Owner, error)
 }
 
 type SessionStorage interface {
-	FindByAccessToken(accessToken string) (*Session, error)
-	FindByRefreshToken(refreshToken string) (*Session, error)
-	Save(session *Session)
-	Delete(session *Session)
+	FindSessionByAccessToken(accessToken string) (*Session, error)
+	FindSessionByRefreshToken(refreshToken string) (*Session, error)
+	SaveSession(session *Session)
+	DeleteSession(session *Session)
+}
+
+type ScopeStorage interface {
+	FindScopeByName(name string) (*Scope, error)
 }

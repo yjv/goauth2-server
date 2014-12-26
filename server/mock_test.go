@@ -51,70 +51,85 @@ func (server *MockServer) Config() *Config {
 	return config
 }
 
-func (server *MockServer) GrantOauthSession(oauthSessionRequest OauthSessionRequest) (*Session, error) {
+func (server *MockServer) GrantOauthSession(oauthSessionRequest OauthSessionRequest) (*Session, OauthError) {
 
 	args := server.Mock.Called(oauthSessionRequest)
 	session, _ := args.Get(0).(*Session)
-	return session, args.Error(1)
+	error, _ := args.Get(1).(OauthError)
+	return session, error
 
 }
-
 
 type MockOwnerClientStorage struct {
 	mock.Mock
 }
 
-func (storage *MockOwnerClientStorage) FindClientByClientId(clientId string) (*Client, error) {
+func (storage *MockOwnerClientStorage) FindClientById(clientId string) (*Client, error) {
 
 	args := storage.Mock.Called(clientId)
 	client, _ := args.Get(0).(*Client)
 	return client, args.Error(1)
 }
 
-func (storage *MockOwnerClientStorage) FindByClientIdAndSecret(clientId string, clientSecret string) (*Client, error) {
+func (storage *MockOwnerClientStorage) FindClientByIdAndSecret(clientId string, clientSecret string) (*Client, error) {
 
 	args := storage.Mock.Called(clientId, clientSecret)
 	client, _ := args.Get(0).(*Client)
 	return client, args.Error(1)
 }
-func (storage *MockOwnerClientStorage) FindByOwnerUsername(username string) (*Owner, error) {
+
+func (storage *MockOwnerClientStorage) RefreshClient(client *Client) (*Client, error) {
+	args := storage.Mock.Called(client)
+	client, _ = args.Get(0).(*Client)
+	return client, args.Error(1)
+
+}
+
+func (storage *MockOwnerClientStorage) FindOwnerByUsername(username string) (*Owner, error) {
 
 	args := storage.Mock.Called(username)
 	owner, _ := args.Get(0).(*Owner)
 	return owner, args.Error(1)
 }
 
-func (storage *MockOwnerClientStorage) FindByOwnerUsernameAndPassword(username string, password string) (*Owner, error) {
+func (storage *MockOwnerClientStorage) FindOwnerByUsernameAndPassword(username string, password string) (*Owner, error) {
 
 	args := storage.Mock.Called(username, password)
 	owner, _ := args.Get(0).(*Owner)
 	return owner, args.Error(1)
 }
 
+func (storage *MockOwnerClientStorage) RefreshOwner(owner *Owner) (*Owner, error) {
+	args := storage.Mock.Called(owner)
+	owner, _ = args.Get(0).(*Owner)
+	return owner, args.Error(1)
+
+}
+
 type MockSessionStorage struct {
 	mock.Mock
 }
 
-func (storage *MockSessionStorage) FindByAccessToken(accessToken string) (*Session, error) {
+func (storage *MockSessionStorage) FindSessionByAccessToken(accessToken string) (*Session, error) {
 
 	args := storage.Mock.Called(accessToken)
 	session, _ := args.Get(0).(*Session)
 	return session, args.Error(1)
 }
 
-func (storage *MockSessionStorage) FindByRefreshToken(refreshToken string) (*Session, error) {
+func (storage *MockSessionStorage) FindSessionByRefreshToken(refreshToken string) (*Session, error) {
 
 	args := storage.Mock.Called(refreshToken)
 	session, _ := args.Get(0).(*Session)
 	return session, args.Error(1)
 }
 
-func (storage *MockSessionStorage) Save(session *Session) {
+func (storage *MockSessionStorage) SaveSession(session *Session) {
 
 	storage.Mock.Called(session)
 }
 
-func (storage *MockSessionStorage) Delete(session *Session) {
+func (storage *MockSessionStorage) DeleteSession(session *Session) {
 
 	storage.Mock.Called(session)
 }

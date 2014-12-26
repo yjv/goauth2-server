@@ -55,7 +55,7 @@ func TestServerGrantOauthSessionWhereGrantNotFound(t *testing.T) {
 	session, error := server.GrantOauthSession(NewBasicOauthSessionRequest("bla", make(map[string]string)))
 
 	assert.Nil(t, session)
-	assert.Equal(t, errors.New("grant named bla couldnt be found"), error)
+	assert.Equal(t, &GrantNotFoundError{"bla"}, error)
 }
 
 func TestServerGrantOauthSessionWhereGrantReturnsAnError(t *testing.T) {
@@ -77,7 +77,29 @@ func TestServerGrantOauthSessionWhereGrantReturnsAnError(t *testing.T) {
 	session, error := server.GrantOauthSession(oauthSessionRequest)
 
 	assert.Nil(t, session)
-	assert.Equal(t, errors.New("bla bla bla"), error)
+	assert.Equal(t, &UnexpectedError{errors.New("bla bla bla")}, error)
+}
+
+func TestServerGrantOauthSessionWhereGrantReturnsAnOauthError(t *testing.T) {
+
+	ownerClientStorage := &MockOwnerClientStorage{}
+	sessionStorage := &MockSessionStorage{}
+
+	server := NewServer(
+		ownerClientStorage,
+		ownerClientStorage,
+		sessionStorage,
+	)
+	oauthSessionRequest := NewBasicOauthSessionRequest("test", make(map[string]string))
+	grant := &MockGrant{}
+	grant.On("Name").Return("test")
+	grant.On("GenerateSession", oauthSessionRequest).Return(nil, &RequiredValueMissingError{"value"})
+	server.AddGrant(grant)
+
+	session, error := server.GrantOauthSession(oauthSessionRequest)
+
+	assert.Nil(t, session)
+	assert.Equal(t, &RequiredValueMissingError{"value"}, error)
 }
 
 func TestServerGrantOauthSessionWhereGrantReturnsASessionWithAnAccessToken(t *testing.T) {
@@ -101,7 +123,7 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithAnAccessToken(t *te
 	grant.On("GenerateSession", oauthSessionRequest).Return(session, nil)
 	server.AddGrant(grant)
 
-	sessionStorage.On("Save", session).Return()
+	sessionStorage.On("SaveSession", session).Return()
 
 	returnedSession, error := server.GrantOauthSession(oauthSessionRequest)
 
@@ -131,7 +153,7 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithAnAccessTokenAndGra
 	grant.On("ProcessSession", session).Return()
 	server.AddGrant(grant)
 
-	sessionStorage.On("Save", session).Return()
+	sessionStorage.On("SaveSession", session).Return()
 
 	returnedSession, error := server.GrantOauthSession(oauthSessionRequest)
 
@@ -160,7 +182,7 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessToken(t 
 	grant.On("GenerateSession", oauthSessionRequest).Return(session, nil)
 	server.AddGrant(grant)
 	tokenGenerator.On("GenerateAccessToken", server.Config(), grant).Return(token)
-	sessionStorage.On("Save", session).Return()
+	sessionStorage.On("SaveSession", session).Return()
 
 	returnedSession, error := server.GrantOauthSession(oauthSessionRequest)
 
@@ -193,7 +215,7 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessTokenAnd
 	grant.On("ShouldGenerateRefreshToken", session).Return(false)
 	server.AddGrant(grant)
 	tokenGenerator.On("GenerateAccessToken", server.Config(), grant).Return(accessToken)
-	sessionStorage.On("Save", session).Return()
+	sessionStorage.On("SaveSession", session).Return()
 
 	returnedSession, error := server.GrantOauthSession(oauthSessionRequest)
 
@@ -228,7 +250,7 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessTokenAnd
 	server.AddGrant(grant)
 	tokenGenerator.On("GenerateAccessToken", server.Config(), grant).Return(accessToken)
 	tokenGenerator.On("GenerateRefreshToken", server.Config(), grant).Return(refreshToken)
-	sessionStorage.On("Save", session).Return()
+	sessionStorage.On("SaveSession", session).Return()
 
 	returnedSession, error := server.GrantOauthSession(oauthSessionRequest)
 
@@ -265,7 +287,7 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessTokenAnd
 	server.AddGrant(grant)
 	tokenGenerator.On("GenerateAccessToken", server.Config(), grant).Return(accessToken)
 	tokenGenerator.On("GenerateRefreshToken", server.Config(), grant).Return(refreshToken)
-	sessionStorage.On("Save", session).Return()
+	sessionStorage.On("SaveSession", session).Return()
 
 	returnedSession, error := server.GrantOauthSession(oauthSessionRequest)
 

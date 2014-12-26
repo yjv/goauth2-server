@@ -1,9 +1,77 @@
 package server
 
-type OauthError struct {
-	string string
+import (
+	"fmt"
+)
+
+type ErrorCode int
+
+const (
+	StorageSearchFailed ErrorCode = iota
+	RequiredValueMissing ErrorCode = iota
+	GrantNotFound       ErrorCode = iota
+	Unexpected          ErrorCode = iota
+)
+
+type OauthError interface {
+	error
+	OauthErrorCode() ErrorCode
 }
 
-func (error *OauthError) Error() string {
-	return error.string
+type OauthErrorWithPrevious interface {
+	OauthError
+	Previous() error
+}
+
+type StorageSearchFailedError struct {
+	storedType string
+	previous   error
+}
+
+func (error *StorageSearchFailedError) Error() string {
+	return fmt.Sprintf("Failed to find %s.", error.storedType)
+}
+
+func (error *StorageSearchFailedError) OauthErrorCode() ErrorCode {
+	return StorageSearchFailed
+}
+
+func (error *StorageSearchFailedError) Previous() error {
+	return error.previous
+}
+
+type RequiredValueMissingError struct {
+	value string
+}
+
+func (error *RequiredValueMissingError) Error() string {
+	return fmt.Sprintf("%s is required.", error.value)
+}
+
+func (error *RequiredValueMissingError) OauthErrorCode() ErrorCode {
+	return RequiredValueMissing
+}
+
+type GrantNotFoundError struct {
+	name string
+}
+
+func (error *GrantNotFoundError) Error() string {
+	return fmt.Sprintf("The grant named %s was not found.", error.name)
+}
+
+func (error *GrantNotFoundError) OauthErrorCode() ErrorCode {
+	return GrantNotFound
+}
+
+type UnexpectedError struct {
+	error error
+}
+
+func (error *UnexpectedError) Error() string {
+	return "An unexpected error occured."
+}
+
+func (error *UnexpectedError) OauthErrorCode() ErrorCode {
+	return Unexpected
 }

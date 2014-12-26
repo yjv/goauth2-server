@@ -1,9 +1,5 @@
 package server
 
-import (
-	"errors"
-)
-
 type Grant interface {
 	GenerateSession(oauthSessionRequest OauthSessionRequest) (*Session, error)
 	Name() string
@@ -82,21 +78,21 @@ func (grant *PasswordGrant) GenerateSession(oauthSessionRequest OauthSessionRequ
 
 	if !exists {
 
-		return nil, errors.New("username must be set")
+		return nil, &RequiredValueMissingError{"username"}
 	}
 
 	password, exists := oauthSessionRequest.Get("password")
 
 	if !exists {
 
-		return nil, errors.New("password must be set")
+		return nil, &RequiredValueMissingError{"password"}
 	}
 
-	owner, error := grant.server.OwnerStorage().FindByOwnerUsernameAndPassword(username, password)
+	owner, error := grant.server.OwnerStorage().FindOwnerByUsernameAndPassword(username, password)
 
 	if owner == nil {
 
-		return nil, error
+		return nil, &StorageSearchFailedError{"owner", error}
 	}
 
 	session.Owner = owner
@@ -132,14 +128,14 @@ func (grant *RefreshTokenGrant) GenerateSession(oauthSessionRequest OauthSession
 
 	if !exists {
 
-		return nil, errors.New("refresh_token must be set")
+		return nil, &RequiredValueMissingError{"refresh_token"}
 	}
 
-	session, error := grant.server.SessionStorage().FindByRefreshToken(refreshToken)
+	session, error := grant.server.SessionStorage().FindSessionByRefreshToken(refreshToken)
 
 	if session == nil {
 
-		return nil, error
+		return nil, &StorageSearchFailedError{"session", error}
 	}
 
 	session.AccessToken = nil
@@ -174,15 +170,22 @@ func AuthenticateClient(oauthSessionRequest OauthSessionRequest, storage ClientS
 
 	if !exists {
 
-		return nil, &OauthError{"client_id must be set"}
+		return nil, &RequiredValueMissingError{"client_id"}
 	}
 
 	clientSecret, exists := oauthSessionRequest.Get("client_secret")
 
 	if !exists {
 
-		return nil, &OauthError{"client_secret must be set"}
+		return nil, &RequiredValueMissingError{"client_secret"}
 	}
 
-	return storage.FindByClientIdAndSecret(clientId, clientSecret)
+	client, error := storage.FindClientByIdAndSecret(clientId, clientSecret)
+
+	if client == nil {
+
+		return nil, &StorageSearchFailedError{"client", error}
+	}
+
+	return client, nil
 }

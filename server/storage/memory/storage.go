@@ -26,7 +26,7 @@ func (storage *MemoryOwnerClientStorage) AddOwner(username string, password stri
 	return storage
 }
 
-func (storage *MemoryOwnerClientStorage) FindClientByClientId(clientId string) (*server.Client, error) {
+func (storage *MemoryOwnerClientStorage) FindClientById(clientId string) (*server.Client, error) {
 
 	client, ok := storage.clientsByClientId[clientId]
 
@@ -38,7 +38,7 @@ func (storage *MemoryOwnerClientStorage) FindClientByClientId(clientId string) (
 	return client, nil
 }
 
-func (storage *MemoryOwnerClientStorage) FindByClientIdAndSecret(clientId string, clientSecret string) (*server.Client, error) {
+func (storage *MemoryOwnerClientStorage) FindClientByIdAndSecret(clientId string, clientSecret string) (*server.Client, error) {
 
 	client, ok := storage.clientsByClientIdAndSecret[clientId+":"+clientSecret]
 
@@ -49,7 +49,20 @@ func (storage *MemoryOwnerClientStorage) FindByClientIdAndSecret(clientId string
 
 	return client, nil
 }
-func (storage *MemoryOwnerClientStorage) FindByOwnerUsername(username string) (*server.Owner, error) {
+
+func (storage *MemoryOwnerClientStorage) RefreshClient(client *Client) (*Client, error) {
+
+	client, exists := storage.clientsByClientId[client.Id]
+
+	if !exists {
+
+		return nil, fmt.Errorf("failed to refresh client")
+	}
+
+	return client, nil
+}
+
+func (storage *MemoryOwnerClientStorage) FindOwnerByUsername(username string) (*server.Owner, error) {
 
 	owner, ok := storage.ownersByUsername[username]
 
@@ -61,13 +74,25 @@ func (storage *MemoryOwnerClientStorage) FindByOwnerUsername(username string) (*
 	return owner, nil
 }
 
-func (storage *MemoryOwnerClientStorage) FindByOwnerUsernameAndPassword(username string, password string) (*server.Owner, error) {
+func (storage *MemoryOwnerClientStorage) FindOwnerByUsernameAndPassword(username string, password string) (*server.Owner, error) {
 
 	owner, ok := storage.ownersByUsernameAndPassword[username+":"+password]
 
 	if !ok {
 
 		return nil, fmt.Errorf("couldnt find the owner")
+	}
+
+	return owner, nil
+}
+
+func (storage *MemoryOwnerClientStorage) RefreshOwner(owner *Owner) (*Owner, error) {
+
+	owner, exists := storage.ownersByUsername[owner.Id]
+
+	if !exists {
+
+		return nil, fmt.Errorf("failed to refresh owner")
 	}
 
 	return owner, nil
@@ -88,7 +113,7 @@ type MemorySessionStorage struct {
 	sessionsByRefreshToken map[string]*server.Session
 }
 
-func (storage *MemorySessionStorage) FindByAccessToken(accessToken string) (*server.Session, error) {
+func (storage *MemorySessionStorage) FindSessionByAccessToken(accessToken string) (*server.Session, error) {
 
 	session, ok := storage.sessionsByAccessToken[accessToken]
 
@@ -110,7 +135,7 @@ func (storage *MemorySessionStorage) FindByAccessToken(accessToken string) (*ser
 	return session, nil
 }
 
-func (storage *MemorySessionStorage) FindByRefreshToken(refreshToken string) (*server.Session, error) {
+func (storage *MemorySessionStorage) FindSessionByRefreshToken(refreshToken string) (*server.Session, error) {
 
 	session, ok := storage.sessionsByRefreshToken[refreshToken]
 
@@ -128,7 +153,7 @@ func (storage *MemorySessionStorage) FindByRefreshToken(refreshToken string) (*s
 	return session, nil
 }
 
-func (storage *MemorySessionStorage) Save(session *server.Session) {
+func (storage *MemorySessionStorage) SaveSession(session *server.Session) {
 
 	storage.sessionsByAccessToken[session.AccessToken.Token] = session
 
@@ -138,7 +163,7 @@ func (storage *MemorySessionStorage) Save(session *server.Session) {
 	}
 }
 
-func (storage *MemorySessionStorage) Delete(session *server.Session) {
+func (storage *MemorySessionStorage) DeleteSession(session *server.Session) {
 
 	delete(storage.sessionsByAccessToken, session.AccessToken.Token)
 	delete(storage.sessionsByRefreshToken, session.RefreshToken.Token)

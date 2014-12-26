@@ -16,6 +16,11 @@ type Token struct {
 	Expires int64
 }
 
+type Scope struct {
+	Id   string
+	Name string
+}
+
 const (
 	NoExpiration int64 = -1
 )
@@ -28,10 +33,17 @@ type Session struct {
 	AccessToken  *Token
 	RefreshToken *Token
 	AuthCode     *AuthCode
-	Scopes       []string
+	Scopes       map[string]*Scope
 	Client       *Client
 	Owner        *Owner
 	ExtraData    map[string]string
+}
+
+func NewSession() *Session {
+	session := &Session{}
+	session.Scopes = make(map[string]*Scope)
+	session.ExtraData = make(map[string]string)
+	return session
 }
 
 type OauthSessionRequest interface {
