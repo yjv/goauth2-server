@@ -7,10 +7,10 @@ import (
 type ErrorCode int
 
 const (
-	StorageSearchFailed ErrorCode = iota
+	StorageSearchFailed  ErrorCode = iota
 	RequiredValueMissing ErrorCode = iota
-	GrantNotFound       ErrorCode = iota
-	Unexpected          ErrorCode = iota
+	GrantNotFound        ErrorCode = iota
+	Unexpected           ErrorCode = iota
 )
 
 type OauthError interface {
