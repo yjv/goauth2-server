@@ -20,7 +20,7 @@ func TestClientCredentialsGrantGenerateSession(t *testing.T) {
 	server := &MockServer{}
 	grant.SetServer(server)
 	client, params, _ := runClientLoadAssertions(t, grant, server)
-	session := &Session{}
+	session := NewSession()
 	session.Client = client
 	session.Owner = NewOwnerFromClient(client)
 	generatedSession, error := grant.GenerateSession(&BasicOauthSessionRequest{grant.Name(), params})
@@ -73,7 +73,7 @@ func TestPasswordGrantGenerateSession(t *testing.T) {
 	params["username"] = "right_username"
 	storage.On("FindOwnerByUsernameAndPassword", params["username"], params["password"]).Return(owner, nil)
 
-	expectedSession := &Session{}
+	expectedSession := NewSession()
 	expectedSession.Client = client
 	expectedSession.Owner = owner
 
@@ -133,7 +133,7 @@ func TestRefreshGrantGenerateSession(t *testing.T) {
 
 	params["refresh_token"] = "good_refresh_token"
 
-	expectedSession := &Session{}
+	expectedSession := NewSession()
 	expectedSession.Client = client
 	expectedSession.Owner = owner
 	expectedSession.RefreshToken = &Token{}

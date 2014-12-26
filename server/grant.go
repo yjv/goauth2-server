@@ -46,7 +46,7 @@ func (grant *ClientCredentialsGrant) GenerateSession(oauthSessionRequest OauthSe
 		return nil, error
 	}
 
-	session := &Session{}
+	session := NewSession()
 	session.Client = client
 	session.Owner = NewOwnerFromClient(client)
 
@@ -71,7 +71,7 @@ func (grant *PasswordGrant) GenerateSession(oauthSessionRequest OauthSessionRequ
 		return nil, error
 	}
 
-	session := &Session{}
+	session := NewSession()
 	session.Client = client
 
 	username, exists := oauthSessionRequest.Get("username")
