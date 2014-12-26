@@ -2,74 +2,198 @@ package server
 
 import (
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"testing"
+	"errors"
 )
 
-func TestClientCredentialsGrantGrant(t *testing.T) {
+func TestClientCredentialsGrant(t *testing.T) {
 
 	grant := &ClientCredentialsGrant{BaseGrant{123, nil}}
-	server := &MockServer{}
-	grant.SetServer(server)
-	runBaseGrantAssertions(t, grant)
-}
-
-func runBaseGrantAssertions(t *testing.T, grant Grant) {
+	assert.Equal(t, "client_credentials", grant.Name())
 	assert.Equal(t, grant.AccessTokenExpiration(), 123)
 	assert.False(t, grant.ShouldGenerateRefreshToken(&Session{}))
 }
 
-type MockServer struct {
-	mock.Mock
-	Server
+func TestClientCredentialsGrantGenerateSession(t *testing.T) {
+
+	grant := &ClientCredentialsGrant{BaseGrant{123, nil}}
+	server := &MockServer{}
+	grant.SetServer(server)
+	client, params, _ := runClientLoadAssertions(t, grant, server)
+	session := &Session{}
+	session.Client = client
+	session.Owner = NewOwnerFromClient(client)
+	generatedSession, error := grant.GenerateSession(&BasicOauthSessionRequest{grant.Name(), params})
+	assert.Equal(t, session, generatedSession)
+	assert.Nil(t, error)
 }
 
-func (server *MockServer) GetGrant(name string) (Grant, bool) {
+func TestPasswordGrant(t *testing.T) {
 
-	args := server.Mock.Called(name)
-	grant, _ := args.Get(0).(Grant)
-	return grant, args.Bool(1)
+	grant := &PasswordGrant{BaseGrant{123, nil}}
+	assert.Equal(t, "password", grant.Name())
+	assert.Equal(t, grant.AccessTokenExpiration(), 123)
+	assert.True(t, grant.ShouldGenerateRefreshToken(&Session{}))
 }
 
-func (server *MockServer) TokenGenerator() TokenGenerator {
+func TestPasswordGrantGenerateSession(t *testing.T) {
 
-	args := server.Mock.Called()
-	tokenGenerator, _ := args.Get(0).(TokenGenerator)
-	return tokenGenerator
+	grant := &PasswordGrant{BaseGrant{123, nil}}
+	server := &MockServer{}
+	grant.SetServer(server)
+	client, params, storage := runClientLoadAssertions(t, grant, server)
+
+	//username missing
+	session, error := grant.GenerateSession(&BasicOauthSessionRequest{grant.Name(), params})
+	assert.Nil(t, session)
+	assert.Equal(t, errors.New("username must be set"), error)
+
+	params["username"] = "username"
+
+	//password missing
+	session, error = grant.GenerateSession(&BasicOauthSessionRequest{grant.Name(), params})
+	assert.Nil(t, session)
+	assert.Equal(t, errors.New("password must be set"), error)
+
+	params["password"] = "password"
+
+	server.On("OwnerStorage").Return(storage)
+	storage.On("FindByOwnerUsernameAndPassword", params["username"], params["password"]).Return(nil, errors.New("error"))
+
+	//owner failed to load
+	session, error = grant.GenerateSession(&BasicOauthSessionRequest{grant.Name(), params})
+	assert.Nil(t, session)
+	assert.Equal(t, errors.New("error"), error)
+
+	owner := &Owner{
+		"id",
+		"name",
+	}
+
+	params["username"] = "right_username"
+	storage.On("FindByOwnerUsernameAndPassword", params["username"], params["password"]).Return(owner, nil)
+
+	expectedSession := &Session{}
+	expectedSession.Client = client
+	expectedSession.Owner = owner
+
+	//client loads
+	session, error = grant.GenerateSession(&BasicOauthSessionRequest{grant.Name(), params})
+
+	assert.Equal(t, expectedSession, session)
+	assert.Nil(t, error)
 }
 
-func (server *MockServer) ClientStorage() ClientStorage {
+func TestRefreshGrant(t *testing.T) {
 
-	args := server.Mock.Called()
-	storage, _ := args.Get(0).(ClientStorage)
-	return storage
+	grant := &RefreshTokenGrant{BaseGrant{123, nil}, false}
+	assert.Equal(t, "refresh_token", grant.Name())
+	assert.Equal(t, grant.AccessTokenExpiration(), 123)
+	assert.False(t, grant.ShouldGenerateRefreshToken(&Session{}))
+	grant.RotateRefreshTokens = true
+	assert.True(t, grant.ShouldGenerateRefreshToken(&Session{}))
 }
 
-func (server *MockServer) OwnerStorage() OwnerStorage {
+func TestRefreshGrantGenerateSession(t *testing.T) {
 
-	args := server.Mock.Called()
-	storage, _ := args.Get(0).(OwnerStorage)
-	return storage
+	grant := &RefreshTokenGrant{}
+	server := &MockServer{}
+	config := NewConfig()
+	server.On("Config").Return(config)
+	grant.SetServer(server)
+	assert.True(t, config.AllowRefresh)
+	client, params, _ := runClientLoadAssertions(t, grant, server)
+
+	//refresh_token missing
+	session, error := grant.GenerateSession(&BasicOauthSessionRequest{grant.Name(), params})
+	assert.Nil(t, session)
+	assert.Equal(t, errors.New("refresh_token must be set"), error)
+
+	params["refresh_token"] = "refresh_token"
+
+	storage := &MockSessionStorage{}
+	server.On("SessionStorage").Return(storage)
+	storage.On("FindByRefreshToken", params["refresh_token"]).Return(nil, errors.New("error"))
+
+	//owner failed to load
+	session, error = grant.GenerateSession(&BasicOauthSessionRequest{grant.Name(), params})
+	assert.Nil(t, session)
+	assert.Equal(t, errors.New("error"), error)
+
+	owner := &Owner{
+		"id",
+		"name",
+	}
+
+	client = &Client{
+		"id",
+		"name",
+		"redirect_uri",
+	}
+
+	params["refresh_token"] = "good_refresh_token"
+
+	expectedSession := &Session{}
+	expectedSession.Client = client
+	expectedSession.Owner = owner
+	expectedSession.RefreshToken = &Token{}
+	returnedSession := &(*expectedSession)
+	storage.On("FindByRefreshToken", params["refresh_token"]).Return(returnedSession, nil)
+
+	//session loads
+	session, error = grant.GenerateSession(&BasicOauthSessionRequest{grant.Name(), params})
+
+	assert.Equal(t, expectedSession, session)
+	assert.Nil(t, error)
+
+	expectedSession.RefreshToken = nil
+	grant.RotateRefreshTokens = true
+
+	//session loads
+	session, error = grant.GenerateSession(&BasicOauthSessionRequest{grant.Name(), params})
+
+	assert.Equal(t, expectedSession, session)
+	assert.Nil(t, error)
 }
 
-func (server *MockServer) SessionStorage() SessionStorage {
+func runClientLoadAssertions(t *testing.T, grant Grant, server *MockServer) (*Client, map[string]string, *MockOwnerClientStorage) {
 
-	args := server.Mock.Called()
-	storage, _ := args.Get(0).(SessionStorage)
-	return storage
-}
+	storage := &MockOwnerClientStorage{}
+	server.On("ClientStorage").Return(storage)
 
-func (server *MockServer) Config() *Config {
+	//no client id
+	session, error := grant.GenerateSession(&BasicOauthSessionRequest{})
+	assert.Nil(t, session)
+	assert.Equal(t, &OauthError{"client_id must be set"}, error)
 
-	args := server.Mock.Called()
-	config, _ := args.Get(0).(*Config)
-	return config
-}
+	params := make(map[string]string)
+	grantName := grant.Name()
 
-func (server *MockServer) GrantOauthSession(oauthSessionRequest OauthSessionRequest) (*Session, error) {
+	params["client_id"] = "client_id"
 
-	args := server.Mock.Called(oauthSessionRequest)
-	session, _ := args.Get(0).(*Session)
-	return session, args.Error(1)
+	//no client secret
+	session, error = grant.GenerateSession(&BasicOauthSessionRequest{grantName, params})
+	assert.Nil(t, session)
+	assert.Equal(t, &OauthError{"client_secret must be set"}, error)
 
+	params["client_secret"] = "client_secret"
+
+	storage.On("FindByClientIdAndSecret", params["client_id"], params["client_secret"]).Return(nil, errors.New("error"))
+
+	//client failed to load
+	session, error = grant.GenerateSession(&BasicOauthSessionRequest{grantName, params})
+	assert.Nil(t, session)
+	assert.Equal(t, errors.New("error"), error)
+
+	client := &Client{
+		"client_id",
+		"name",
+		"redirect_uri",
+	}
+
+	params["client_id"] = "good_client_id"
+
+	storage.On("FindByClientIdAndSecret", params["client_id"], params["client_secret"]).Return(client, nil)
+
+	return client, params, storage
 }

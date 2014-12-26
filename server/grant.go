@@ -68,9 +68,9 @@ type PasswordGrant struct {
 
 func (grant *PasswordGrant) GenerateSession(oauthSessionRequest OauthSessionRequest) (*Session, error) {
 
-	var client *Client
+	client, error := AuthenticateClient(oauthSessionRequest, grant.server.ClientStorage())
 
-	if client, error := AuthenticateClient(oauthSessionRequest, grant.server.ClientStorage()); client == nil {
+	if client == nil {
 
 		return nil, error
 	}
@@ -92,9 +92,9 @@ func (grant *PasswordGrant) GenerateSession(oauthSessionRequest OauthSessionRequ
 		return nil, errors.New("password must be set")
 	}
 
-	var owner *Owner
+	owner, error := grant.server.OwnerStorage().FindByOwnerUsernameAndPassword(username, password)
 
-	if owner, error := grant.server.OwnerStorage().FindByOwnerUsernameAndPassword(username, password); owner == nil {
+	if owner == nil {
 
 		return nil, error
 	}
@@ -174,14 +174,14 @@ func AuthenticateClient(oauthSessionRequest OauthSessionRequest, storage ClientS
 
 	if !exists {
 
-		return nil, errors.New("client_id must be set")
+		return nil, &OauthError{"client_id must be set"}
 	}
 
 	clientSecret, exists := oauthSessionRequest.Get("client_secret")
 
 	if !exists {
 
-		return nil, errors.New("client_secret must be set")
+		return nil, &OauthError{"client_secret must be set"}
 	}
 
 	return storage.FindByClientIdAndSecret(clientId, clientSecret)
