@@ -13,7 +13,7 @@ func TestServerGettersAndGrantManagement(t *testing.T) {
 	config := NewConfig()
 	tokenGenerator := NewDefaultTokenGenerator()
 
-	server := NewServerWithConfigAndTokenGenerator(
+	server := NewWithConfigAndTokenGenerator(
 		config,
 		tokenGenerator,
 		ownerClientStorage,
@@ -43,7 +43,7 @@ func TestServerGrantOauthSessionWhereGrantNotFound(t *testing.T) {
 	ownerClientStorage := &MockOwnerClientStorage{}
 	sessionStorage := &MockSessionStorage{}
 
-	server := NewServer(
+	server := New(
 		ownerClientStorage,
 		ownerClientStorage,
 		sessionStorage,
@@ -63,7 +63,7 @@ func TestServerGrantOauthSessionWhereGrantReturnsAnError(t *testing.T) {
 	ownerClientStorage := &MockOwnerClientStorage{}
 	sessionStorage := &MockSessionStorage{}
 
-	server := NewServer(
+	server := New(
 		ownerClientStorage,
 		ownerClientStorage,
 		sessionStorage,
@@ -85,7 +85,7 @@ func TestServerGrantOauthSessionWhereGrantReturnsAnOauthError(t *testing.T) {
 	ownerClientStorage := &MockOwnerClientStorage{}
 	sessionStorage := &MockSessionStorage{}
 
-	server := NewServer(
+	server := New(
 		ownerClientStorage,
 		ownerClientStorage,
 		sessionStorage,
@@ -108,7 +108,7 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithAnAccessToken(t *te
 	sessionStorage := &MockSessionStorage{}
 	tokenGenerator := &MockTokenGenerator{}
 
-	server := NewServerWithTokenGenerator(
+	server := NewWithTokenGenerator(
 		tokenGenerator,
 		ownerClientStorage,
 		ownerClientStorage,
@@ -137,7 +137,7 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithAnAccessTokenAndGra
 	sessionStorage := &MockSessionStorage{}
 	tokenGenerator := &MockTokenGenerator{}
 
-	server := NewServerWithTokenGenerator(
+	server := NewWithTokenGenerator(
 		tokenGenerator,
 		ownerClientStorage,
 		ownerClientStorage,
@@ -167,7 +167,7 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessToken(t 
 	sessionStorage := &MockSessionStorage{}
 	tokenGenerator := &MockTokenGenerator{}
 
-	server := NewServerWithTokenGenerator(
+	server := NewWithTokenGenerator(
 		tokenGenerator,
 		ownerClientStorage,
 		ownerClientStorage,
@@ -197,7 +197,7 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessTokenAnd
 	sessionStorage := &MockSessionStorage{}
 	tokenGenerator := &MockTokenGenerator{}
 
-	server := NewServerWithTokenGenerator(
+	server := NewWithTokenGenerator(
 		tokenGenerator,
 		ownerClientStorage,
 		ownerClientStorage,
@@ -230,7 +230,7 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessTokenAnd
 	sessionStorage := &MockSessionStorage{}
 	tokenGenerator := &MockTokenGenerator{}
 
-	server := NewServerWithTokenGenerator(
+	server := NewWithTokenGenerator(
 		tokenGenerator,
 		ownerClientStorage,
 		ownerClientStorage,
@@ -266,7 +266,7 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessTokenAnd
 	sessionStorage := &MockSessionStorage{}
 	tokenGenerator := &MockTokenGenerator{}
 
-	server := NewServerWithTokenGenerator(
+	server := NewWithTokenGenerator(
 		tokenGenerator,
 		ownerClientStorage,
 		ownerClientStorage,

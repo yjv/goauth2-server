@@ -105,9 +105,9 @@ func (server *DefaultServer) GrantOauthSession(oauthSessionRequest OauthSessionR
 	return session, nil
 }
 
-func NewServer(clientStorage ClientStorage, ownerStorage OwnerStorage, sessionStorage SessionStorage) *DefaultServer {
+func New(clientStorage ClientStorage, ownerStorage OwnerStorage, sessionStorage SessionStorage) *DefaultServer {
 
-	return NewServerWithConfigAndTokenGenerator(
+	return NewWithConfigAndTokenGenerator(
 		NewConfig(),
 		NewDefaultTokenGenerator(),
 		clientStorage,
@@ -116,14 +116,14 @@ func NewServer(clientStorage ClientStorage, ownerStorage OwnerStorage, sessionSt
 	)
 }
 
-func NewServerWithTokenGenerator(
+func NewWithTokenGenerator(
 	tokenGenerator TokenGenerator,
 	clientStorage ClientStorage,
 	ownerStorage OwnerStorage,
 	sessionStorage SessionStorage,
 ) *DefaultServer {
 
-	return NewServerWithConfigAndTokenGenerator(
+	return NewWithConfigAndTokenGenerator(
 		NewConfig(),
 		tokenGenerator,
 		clientStorage,
@@ -132,14 +132,14 @@ func NewServerWithTokenGenerator(
 	)
 }
 
-func NewServerWithConfig(
+func NewWithConfig(
 	config *Config,
 	clientStorage ClientStorage,
 	ownerStorage OwnerStorage,
 	sessionStorage SessionStorage,
 ) *DefaultServer {
 
-	return NewServerWithConfigAndTokenGenerator(
+	return NewWithConfigAndTokenGenerator(
 		config,
 		NewDefaultTokenGenerator(),
 		clientStorage,
@@ -148,7 +148,7 @@ func NewServerWithConfig(
 	)
 }
 
-func NewServerWithConfigAndTokenGenerator(
+func NewWithConfigAndTokenGenerator(
 	config *Config,
 	tokenGenerator TokenGenerator,
 	clientStorage ClientStorage,

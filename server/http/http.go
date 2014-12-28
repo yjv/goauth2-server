@@ -13,11 +13,23 @@ func NewRequestFormOauthSessionRequest(request *http.Request) *RequestFormOauthS
 	return &RequestFormOauthSessionRequest{request}
 }
 
-func (request *RequestFormOauthSessionRequest) Get(name string) (string, bool) {
+func (request *RequestFormOauthSessionRequest) Get(name string) []string {
 
 	request.parseRequestForm()
+	value, ok := request.request.Form[name]
 
-	return request.request.Form.Get(name), true
+	if !ok {
+		return []string{}
+	}
+
+	return value
+}
+
+func (request *RequestFormOauthSessionRequest) GetFirst(name string) (string, bool) {
+
+	request.parseRequestForm()
+	_, ok := request.request.Form[name]
+	return request.request.Form.Get(name), ok
 }
 
 func (request *RequestFormOauthSessionRequest) Grant() string {
