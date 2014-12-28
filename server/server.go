@@ -6,6 +6,7 @@ type Server interface {
 	ClientStorage() ClientStorage
 	OwnerStorage() OwnerStorage
 	SessionStorage() SessionStorage
+	ScopeStorage() ScopeStorage
 	Config() *Config
 	GrantOauthSession(oauthSessionRequest OauthSessionRequest) (*Session, OauthError)
 }
@@ -17,6 +18,7 @@ type DefaultServer struct {
 	clientStorage  ClientStorage
 	ownerStorage   OwnerStorage
 	sessionStorage SessionStorage
+	scopeStorage ScopeStorage
 }
 
 func (server *DefaultServer) AddGrant(grant Grant) *DefaultServer {
@@ -56,6 +58,11 @@ func (server *DefaultServer) SessionStorage() SessionStorage {
 	return server.sessionStorage
 }
 
+func (server *DefaultServer) ScopeStorage() ScopeStorage {
+
+	return server.scopeStorage
+}
+
 func (server *DefaultServer) Config() *Config {
 
 	return server.config
@@ -87,12 +94,23 @@ func (server *DefaultServer) GrantOauthSession(oauthSessionRequest OauthSessionR
 
 	if session.AccessToken == nil {
 
-		session.AccessToken = server.tokenGenerator.GenerateAccessToken(server.config, grant)
+		session.AccessToken = server.tokenGenerator.GenerateAccessToken(server.Config(), grant)
 	}
 
 	if server.config.AllowRefresh && grant.ShouldGenerateRefreshToken(session) {
 
-		session.RefreshToken = server.tokenGenerator.GenerateRefreshToken(server.config, grant)
+		session.RefreshToken = server.tokenGenerator.GenerateRefreshToken(server.Config(), grant)
+	}
+
+	for _, scopeName := range oauthSessionRequest.Get("scopes") {
+
+		scope, error := server.ScopeStorage().FindScopeByName(scopeName)
+
+		if scope == nil {
+			return nil, &InvalidScopeError{scopeName, error}
+		}
+
+		session.Scopes[scopeName] = scope
 	}
 
 	if v, ok := grant.(PostProcessingGrant); ok {
@@ -105,7 +123,7 @@ func (server *DefaultServer) GrantOauthSession(oauthSessionRequest OauthSessionR
 	return session, nil
 }
 
-func New(clientStorage ClientStorage, ownerStorage OwnerStorage, sessionStorage SessionStorage) *DefaultServer {
+func New(clientStorage ClientStorage, ownerStorage OwnerStorage, sessionStorage SessionStorage, scopeStorage ScopeStorage) *DefaultServer {
 
 	return NewWithConfigAndTokenGenerator(
 		NewConfig(),
@@ -113,6 +131,7 @@ func New(clientStorage ClientStorage, ownerStorage OwnerStorage, sessionStorage 
 		clientStorage,
 		ownerStorage,
 		sessionStorage,
+		scopeStorage,
 	)
 }
 
@@ -121,6 +140,7 @@ func NewWithTokenGenerator(
 	clientStorage ClientStorage,
 	ownerStorage OwnerStorage,
 	sessionStorage SessionStorage,
+	scopeStorage ScopeStorage,
 ) *DefaultServer {
 
 	return NewWithConfigAndTokenGenerator(
@@ -129,6 +149,7 @@ func NewWithTokenGenerator(
 		clientStorage,
 		ownerStorage,
 		sessionStorage,
+		scopeStorage,
 	)
 }
 
@@ -137,6 +158,7 @@ func NewWithConfig(
 	clientStorage ClientStorage,
 	ownerStorage OwnerStorage,
 	sessionStorage SessionStorage,
+	scopeStorage ScopeStorage,
 ) *DefaultServer {
 
 	return NewWithConfigAndTokenGenerator(
@@ -145,6 +167,7 @@ func NewWithConfig(
 		clientStorage,
 		ownerStorage,
 		sessionStorage,
+		scopeStorage,
 	)
 }
 
@@ -154,6 +177,7 @@ func NewWithConfigAndTokenGenerator(
 	clientStorage ClientStorage,
 	ownerStorage OwnerStorage,
 	sessionStorage SessionStorage,
+	scopeStorage ScopeStorage,
 ) *DefaultServer {
 
 	return &DefaultServer{
@@ -163,5 +187,6 @@ func NewWithConfigAndTokenGenerator(
 		clientStorage,
 		ownerStorage,
 		sessionStorage,
+		scopeStorage,
 	}
 }

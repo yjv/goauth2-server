@@ -181,3 +181,31 @@ func NewMemorySessionStorage() *MemorySessionStorage {
 		make(map[string]*server.Session),
 	}
 }
+
+type MemoryScopeStorage struct {
+	scopes map[string]string
+}
+
+func (storage *MemoryScopeStorage) FindScopeByName(name string) (*server.Scope, error) {
+
+	scope, ok := storage.scopes
+
+	if !ok {
+		return nil, fmt.Errorf("Scope named %s not found", name)
+	}
+
+	return scope, nil
+}
+
+func (storage *MemoryScopeStorage) Set(name string, scope *Scope) *MemoryScopeStorage {
+
+	storage.scopes[name] = scope
+	return storage
+}
+
+func NewMemoryScopeStorage() *MemorySessionStorage {
+
+	return &MemoryScopeStorage{
+		make(map[string]*server.Scope),
+	}
+}

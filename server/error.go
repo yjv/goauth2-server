@@ -8,6 +8,7 @@ type ErrorCode int
 
 const (
 	StorageSearchFailed  ErrorCode = iota
+	InvalidScope         ErrorCode = iota
 	RequiredValueMissing ErrorCode = iota
 	GrantNotFound        ErrorCode = iota
 	Unexpected           ErrorCode = iota
@@ -74,4 +75,21 @@ func (error *UnexpectedError) Error() string {
 
 func (error *UnexpectedError) OauthErrorCode() ErrorCode {
 	return Unexpected
+}
+
+type InvalidScopeError struct {
+	name string
+	previous error
+}
+
+func (error *InvalidScopeError) Error() string {
+	return fmt.Sprintf("the scope named %s is invalid.", error.name)
+}
+
+func (error *InvalidScopeError) OauthErrorCode() ErrorCode {
+	return InvalidScope
+}
+
+func (error *InvalidScopeError) Previous() error {
+	return error.previous
 }

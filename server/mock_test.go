@@ -134,6 +134,17 @@ func (storage *MockSessionStorage) DeleteSession(session *Session) {
 	storage.Mock.Called(session)
 }
 
+type MockScopeStorage struct {
+	mock.Mock
+}
+
+func (generator *MockScopeStorage) FindScopeByName(name string) (*Scope, error) {
+
+	args := generator.Mock.Called(name)
+	scope, _ := args.Get(0).(*Scope)
+	return scope, args.Error(1)
+}
+
 type MockGrant struct {
 	mock.Mock
 	Server Server
@@ -156,10 +167,6 @@ func (grant *MockGrant) AccessTokenExpiration() int {
 	return grant.Mock.Called().Get(0).(int)
 }
 
-func (grant *MockGrant) SetServer(server Server) {
-
-	grant.Server = server
-}
 
 func (grant *MockGrant) ShouldGenerateRefreshToken(session *Session) bool {
 

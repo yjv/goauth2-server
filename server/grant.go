@@ -106,6 +106,7 @@ func (grant *PasswordGrant) ShouldGenerateRefreshToken(session *Session) bool {
 type RefreshTokenGrant struct {
 	BaseGrant
 	RotateRefreshTokens bool
+	RefreshClientAndOwner bool
 }
 
 func (grant *RefreshTokenGrant) GenerateSession(oauthSessionRequest OauthSessionRequest, server Server) (*Session, error) {
@@ -113,22 +114,48 @@ func (grant *RefreshTokenGrant) GenerateSession(oauthSessionRequest OauthSession
 	client, error := AuthenticateClient(oauthSessionRequest, server.ClientStorage())
 
 	if client == nil {
-
 		return nil, error
 	}
 
 	refreshToken, exists := oauthSessionRequest.GetFirst("refresh_token")
 
 	if !exists {
-
 		return nil, &RequiredValueMissingError{"refresh_token"}
 	}
 
 	session, error := server.SessionStorage().FindSessionByRefreshToken(refreshToken)
 
 	if session == nil {
-
 		return nil, &StorageSearchFailedError{"session", error}
+	}
+
+	if grant.RefreshClientAndOwner {
+
+		client, error := server.ClientStorage().RefreshClient(session.Client)
+
+		if client == nil {
+			return nil, &StorageSearchFailedError{"client", error}
+		}
+
+		session.Client = client
+
+		owner, error := server.OwnerStorage().RefreshOwner(session.Owner)
+
+		if owner == nil {
+			return nil, &StorageSearchFailedError{"owner", error}
+		}
+
+		session.Owner = owner
+	}
+
+	//make sure the requested scopes are already in the session cant add new scopes
+	//actual instantiation of the scopes will happen in the server
+	for _, scopeName := range oauthSessionRequest.Get("scopes") {
+		_, ok := session.Scopes[scopeName]
+
+		if !ok {
+			return nil, &InvalidScopeError{scopeName, nil}
+		}
 	}
 
 	session.AccessToken = nil

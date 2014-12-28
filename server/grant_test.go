@@ -84,7 +84,7 @@ func TestPasswordGrantGenerateSession(t *testing.T) {
 
 func TestRefreshGrant(t *testing.T) {
 
-	grant := &RefreshTokenGrant{BaseGrant{123}, false}
+	grant := &RefreshTokenGrant{BaseGrant{123}, false, false}
 	assert.Equal(t, "refresh_token", grant.Name())
 	assert.Equal(t, grant.AccessTokenExpiration(), 123)
 	assert.False(t, grant.ShouldGenerateRefreshToken(&Session{}))

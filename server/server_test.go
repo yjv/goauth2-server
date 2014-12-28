@@ -10,6 +10,7 @@ func TestServerGettersAndGrantManagement(t *testing.T) {
 
 	ownerClientStorage := &MockOwnerClientStorage{}
 	sessionStorage := &MockSessionStorage{}
+	scopeStorage := &MockScopeStorage{}
 	config := NewConfig()
 	tokenGenerator := NewDefaultTokenGenerator()
 
@@ -19,6 +20,7 @@ func TestServerGettersAndGrantManagement(t *testing.T) {
 		ownerClientStorage,
 		ownerClientStorage,
 		sessionStorage,
+		scopeStorage,
 	)
 	grant := &MockGrant{}
 	grant.On("Name").Return("test")
@@ -42,11 +44,13 @@ func TestServerGrantOauthSessionWhereGrantNotFound(t *testing.T) {
 
 	ownerClientStorage := &MockOwnerClientStorage{}
 	sessionStorage := &MockSessionStorage{}
+	scopeStorage := &MockScopeStorage{}
 
 	server := New(
 		ownerClientStorage,
 		ownerClientStorage,
 		sessionStorage,
+		scopeStorage,
 	)
 	grant := &MockGrant{}
 	grant.On("Name").Return("test")
@@ -62,11 +66,13 @@ func TestServerGrantOauthSessionWhereGrantReturnsAnError(t *testing.T) {
 
 	ownerClientStorage := &MockOwnerClientStorage{}
 	sessionStorage := &MockSessionStorage{}
+	scopeStorage := &MockScopeStorage{}
 
 	server := New(
 		ownerClientStorage,
 		ownerClientStorage,
 		sessionStorage,
+		scopeStorage,
 	)
 	oauthSessionRequest := NewBasicOauthSessionRequest("test")
 	grant := &MockGrant{}
@@ -84,11 +90,13 @@ func TestServerGrantOauthSessionWhereGrantReturnsAnOauthError(t *testing.T) {
 
 	ownerClientStorage := &MockOwnerClientStorage{}
 	sessionStorage := &MockSessionStorage{}
+	scopeStorage := &MockScopeStorage{}
 
 	server := New(
 		ownerClientStorage,
 		ownerClientStorage,
 		sessionStorage,
+		scopeStorage,
 	)
 	oauthSessionRequest := NewBasicOauthSessionRequest("test")
 	grant := &MockGrant{}
@@ -107,12 +115,14 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithAnAccessToken(t *te
 	ownerClientStorage := &MockOwnerClientStorage{}
 	sessionStorage := &MockSessionStorage{}
 	tokenGenerator := &MockTokenGenerator{}
+	scopeStorage := &MockScopeStorage{}
 
 	server := NewWithTokenGenerator(
 		tokenGenerator,
 		ownerClientStorage,
 		ownerClientStorage,
 		sessionStorage,
+		scopeStorage,
 	)
 
 	oauthSessionRequest := NewBasicOauthSessionRequest("test")
@@ -136,12 +146,14 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithAnAccessTokenAndGra
 	ownerClientStorage := &MockOwnerClientStorage{}
 	sessionStorage := &MockSessionStorage{}
 	tokenGenerator := &MockTokenGenerator{}
+	scopeStorage := &MockScopeStorage{}
 
 	server := NewWithTokenGenerator(
 		tokenGenerator,
 		ownerClientStorage,
 		ownerClientStorage,
 		sessionStorage,
+		scopeStorage,
 	)
 
 	oauthSessionRequest := NewBasicOauthSessionRequest("test")
@@ -166,12 +178,14 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessToken(t 
 	ownerClientStorage := &MockOwnerClientStorage{}
 	sessionStorage := &MockSessionStorage{}
 	tokenGenerator := &MockTokenGenerator{}
+	scopeStorage := &MockScopeStorage{}
 
 	server := NewWithTokenGenerator(
 		tokenGenerator,
 		ownerClientStorage,
 		ownerClientStorage,
 		sessionStorage,
+		scopeStorage,
 	)
 
 	oauthSessionRequest := NewBasicOauthSessionRequest("test")
@@ -196,12 +210,14 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessTokenAnd
 	ownerClientStorage := &MockOwnerClientStorage{}
 	sessionStorage := &MockSessionStorage{}
 	tokenGenerator := &MockTokenGenerator{}
+	scopeStorage := &MockScopeStorage{}
 
 	server := NewWithTokenGenerator(
 		tokenGenerator,
 		ownerClientStorage,
 		ownerClientStorage,
 		sessionStorage,
+		scopeStorage,
 	)
 
 	server.Config().AllowRefresh = true
@@ -229,12 +245,14 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessTokenAnd
 	ownerClientStorage := &MockOwnerClientStorage{}
 	sessionStorage := &MockSessionStorage{}
 	tokenGenerator := &MockTokenGenerator{}
+	scopeStorage := &MockScopeStorage{}
 
 	server := NewWithTokenGenerator(
 		tokenGenerator,
 		ownerClientStorage,
 		ownerClientStorage,
 		sessionStorage,
+		scopeStorage,
 	)
 
 	server.Config().AllowRefresh = true
@@ -265,12 +283,14 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessTokenAnd
 	ownerClientStorage := &MockOwnerClientStorage{}
 	sessionStorage := &MockSessionStorage{}
 	tokenGenerator := &MockTokenGenerator{}
+	scopeStorage := &MockScopeStorage{}
 
 	server := NewWithTokenGenerator(
 		tokenGenerator,
 		ownerClientStorage,
 		ownerClientStorage,
 		sessionStorage,
+		scopeStorage,
 	)
 
 	server.Config().AllowRefresh = true
