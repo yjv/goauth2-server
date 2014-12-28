@@ -139,9 +139,9 @@ type MockGrant struct {
 	Server Server
 }
 
-func (grant *MockGrant) GenerateSession(oauthSessionRequest OauthSessionRequest) (*Session, error) {
+func (grant *MockGrant) GenerateSession(oauthSessionRequest OauthSessionRequest, server Server) (*Session, error) {
 
-	args := grant.Mock.Called(oauthSessionRequest)
+	args := grant.Mock.Called(oauthSessionRequest, server)
 	session, _ := args.Get(0).(*Session)
 	return session, args.Error(1)
 }
@@ -151,9 +151,9 @@ func (grant *MockGrant) Name() string {
 	return grant.Mock.Called().Get(0).(string)
 }
 
-func (grant *MockGrant) AccessTokenExpiration() int64 {
+func (grant *MockGrant) AccessTokenExpiration() int {
 
-	return grant.Mock.Called().Get(0).(int64)
+	return grant.Mock.Called().Get(0).(int)
 }
 
 func (grant *MockGrant) SetServer(server Server) {

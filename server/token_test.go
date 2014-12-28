@@ -17,10 +17,12 @@ func TestDefaultTokenGeneratorGenerateAccessTokenWithGrantNotReturningExpiration
 	generator := NewDefaultTokenGeneratorWithGeneratorFunc(GeneratorFuncMock)
 	config := NewConfig()
 	config.DefaultAccessTokenExpires = 2
-	token := generator.GenerateAccessToken(config, &TestGrant{})
+	grant := &MockGrant{}
+	grant.On("AccessTokenExpiration").Return(0)
+	token := generator.GenerateAccessToken(config, grant)
 	assert.Equal(t, &Token{
 		"hello",
-		time.Now().UTC().Add(time.Duration(2) * time.Second).Unix(),
+		int(time.Now().UTC().Add(time.Duration(2) * time.Second).Unix()),
 	}, token)
 }
 
@@ -29,10 +31,12 @@ func TestDefaultTokenGeneratorGenerateAccessTokenWithGrantReturningExpiration(t 
 	generator := NewDefaultTokenGeneratorWithGeneratorFunc(GeneratorFuncMock)
 	config := NewConfig()
 	config.DefaultAccessTokenExpires = 2
-	token := generator.GenerateAccessToken(config, &TestGrant{nil, nil, 5, true, nil})
+	grant := &MockGrant{}
+	grant.On("AccessTokenExpiration").Return(5)
+	token := generator.GenerateAccessToken(config, grant)
 	assert.Equal(t, &Token{
 		"hello",
-		time.Now().UTC().Add(time.Duration(5) * time.Second).Unix(),
+		int(time.Now().UTC().Add(time.Duration(5) * time.Second).Unix()),
 	}, token)
 }
 
@@ -41,10 +45,12 @@ func TestDefaultTokenGeneratorGenerateRefreshToken(t *testing.T) {
 	generator := NewDefaultTokenGeneratorWithGeneratorFunc(GeneratorFuncMock)
 	config := NewConfig()
 	config.DefaultRefreshTokenExpires = 2
-	token := generator.GenerateRefreshToken(config, &TestGrant{})
+	grant := &MockGrant{}
+	grant.On("AccessTokenExpiration").Return(0)
+	token := generator.GenerateRefreshToken(config, grant)
 	assert.Equal(t, &Token{
 		"hello",
-		time.Now().UTC().Add(time.Duration(2) * time.Second).Unix(),
+		int(time.Now().UTC().Add(time.Duration(2) * time.Second).Unix()),
 	}, token)
 }
 
@@ -56,7 +62,7 @@ func GeneratorFuncMock() string {
 type TestGrant struct {
 	Session                         *Session
 	Error                           error
-	AccessTokenExpirationValue      int64
+	AccessTokenExpirationValue      int
 	ShouldGenerateRefreshTokenValue bool
 	Server                          Server
 }
@@ -71,7 +77,7 @@ func (grant *TestGrant) Name() string {
 	return "test"
 }
 
-func (grant *TestGrant) AccessTokenExpiration() int64 {
+func (grant *TestGrant) AccessTokenExpiration() int {
 
 	return grant.AccessTokenExpirationValue
 }

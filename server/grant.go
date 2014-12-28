@@ -1,31 +1,24 @@
 package server
 
 type Grant interface {
-	GenerateSession(oauthSessionRequest OauthSessionRequest) (*Session, error)
+	GenerateSession(oauthSessionRequest OauthSessionRequest, server Server) (*Session, error)
 	Name() string
-	AccessTokenExpiration() int64
-	SetServer(server Server)
+	AccessTokenExpiration() int
 	ShouldGenerateRefreshToken(session *Session) bool
 }
 
 type PostProcessingGrant interface {
 	Grant
-	ProcessSession(*Session)
+	ProcessSession(session *Session)
 }
 
 type BaseGrant struct {
-	accessTokenExpiration int64
-	server                Server
+	accessTokenExpiration int
 }
 
-func (grant *BaseGrant) AccessTokenExpiration() int64 {
+func (grant *BaseGrant) AccessTokenExpiration() int {
 
 	return grant.accessTokenExpiration
-}
-
-func (grant *BaseGrant) SetServer(server Server) {
-
-	grant.server = server
 }
 
 func (grant *BaseGrant) ShouldGenerateRefreshToken(session *Session) bool {
@@ -37,9 +30,9 @@ type ClientCredentialsGrant struct {
 	BaseGrant
 }
 
-func (grant *ClientCredentialsGrant) GenerateSession(oauthSessionRequest OauthSessionRequest) (*Session, error) {
+func (grant *ClientCredentialsGrant) GenerateSession(oauthSessionRequest OauthSessionRequest, server Server) (*Session, error) {
 
-	client, error := AuthenticateClient(oauthSessionRequest, grant.server.ClientStorage())
+	client, error := AuthenticateClient(oauthSessionRequest, server.ClientStorage())
 
 	if client == nil {
 
@@ -62,9 +55,9 @@ type PasswordGrant struct {
 	BaseGrant
 }
 
-func (grant *PasswordGrant) GenerateSession(oauthSessionRequest OauthSessionRequest) (*Session, error) {
+func (grant *PasswordGrant) GenerateSession(oauthSessionRequest OauthSessionRequest, server Server) (*Session, error) {
 
-	client, error := AuthenticateClient(oauthSessionRequest, grant.server.ClientStorage())
+	client, error := AuthenticateClient(oauthSessionRequest, server.ClientStorage())
 
 	if client == nil {
 
@@ -74,21 +67,21 @@ func (grant *PasswordGrant) GenerateSession(oauthSessionRequest OauthSessionRequ
 	session := NewSession()
 	session.Client = client
 
-	username, exists := oauthSessionRequest.Get("username")
+	username, exists := oauthSessionRequest.GetFirst("username")
 
 	if !exists {
 
 		return nil, &RequiredValueMissingError{"username"}
 	}
 
-	password, exists := oauthSessionRequest.Get("password")
+	password, exists := oauthSessionRequest.GetFirst("password")
 
 	if !exists {
 
 		return nil, &RequiredValueMissingError{"password"}
 	}
 
-	owner, error := grant.server.OwnerStorage().FindOwnerByUsernameAndPassword(username, password)
+	owner, error := server.OwnerStorage().FindOwnerByUsernameAndPassword(username, password)
 
 	if owner == nil {
 
@@ -115,23 +108,23 @@ type RefreshTokenGrant struct {
 	RotateRefreshTokens bool
 }
 
-func (grant *RefreshTokenGrant) GenerateSession(oauthSessionRequest OauthSessionRequest) (*Session, error) {
+func (grant *RefreshTokenGrant) GenerateSession(oauthSessionRequest OauthSessionRequest, server Server) (*Session, error) {
 
-	client, error := AuthenticateClient(oauthSessionRequest, grant.server.ClientStorage())
+	client, error := AuthenticateClient(oauthSessionRequest, server.ClientStorage())
 
 	if client == nil {
 
 		return nil, error
 	}
 
-	refreshToken, exists := oauthSessionRequest.Get("refresh_token")
+	refreshToken, exists := oauthSessionRequest.GetFirst("refresh_token")
 
 	if !exists {
 
 		return nil, &RequiredValueMissingError{"refresh_token"}
 	}
 
-	session, error := grant.server.SessionStorage().FindSessionByRefreshToken(refreshToken)
+	session, error := server.SessionStorage().FindSessionByRefreshToken(refreshToken)
 
 	if session == nil {
 
@@ -158,22 +151,16 @@ func (grant *RefreshTokenGrant) ShouldGenerateRefreshToken(session *Session) boo
 	return grant.RotateRefreshTokens
 }
 
-func (grant *RefreshTokenGrant) SetServer(server Server) {
-
-	grant.server = server
-	server.Config().AllowRefresh = true
-}
-
 func AuthenticateClient(oauthSessionRequest OauthSessionRequest, storage ClientStorage) (*Client, error) {
 
-	clientId, exists := oauthSessionRequest.Get("client_id")
+	clientId, exists := oauthSessionRequest.GetFirst("client_id")
 
 	if !exists {
 
 		return nil, &RequiredValueMissingError{"client_id"}
 	}
 
-	clientSecret, exists := oauthSessionRequest.Get("client_secret")
+	clientSecret, exists := oauthSessionRequest.GetFirst("client_secret")
 
 	if !exists {
 

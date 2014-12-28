@@ -22,8 +22,6 @@ type DefaultServer struct {
 func (server *DefaultServer) AddGrant(grant Grant) *DefaultServer {
 
 	server.grants[grant.Name()] = grant
-	grant.SetServer(server)
-
 	return server
 }
 
@@ -72,7 +70,7 @@ func (server *DefaultServer) GrantOauthSession(oauthSessionRequest OauthSessionR
 		return nil, &GrantNotFoundError{oauthSessionRequest.Grant()}
 	}
 
-	session, error := grant.GenerateSession(oauthSessionRequest)
+	session, error := grant.GenerateSession(oauthSessionRequest, server)
 
 	if session == nil {
 

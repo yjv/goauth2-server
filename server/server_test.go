@@ -52,7 +52,7 @@ func TestServerGrantOauthSessionWhereGrantNotFound(t *testing.T) {
 	grant.On("Name").Return("test")
 	server.AddGrant(grant)
 
-	session, error := server.GrantOauthSession(NewBasicOauthSessionRequest("bla", make(map[string]string)))
+	session, error := server.GrantOauthSession(NewBasicOauthSessionRequest("bla"))
 
 	assert.Nil(t, session)
 	assert.Equal(t, &GrantNotFoundError{"bla"}, error)
@@ -68,10 +68,10 @@ func TestServerGrantOauthSessionWhereGrantReturnsAnError(t *testing.T) {
 		ownerClientStorage,
 		sessionStorage,
 	)
-	oauthSessionRequest := NewBasicOauthSessionRequest("test", make(map[string]string))
+	oauthSessionRequest := NewBasicOauthSessionRequest("test")
 	grant := &MockGrant{}
 	grant.On("Name").Return("test")
-	grant.On("GenerateSession", oauthSessionRequest).Return(nil, errors.New("bla bla bla"))
+	grant.On("GenerateSession", oauthSessionRequest, server).Return(nil, errors.New("bla bla bla"))
 	server.AddGrant(grant)
 
 	session, error := server.GrantOauthSession(oauthSessionRequest)
@@ -90,10 +90,10 @@ func TestServerGrantOauthSessionWhereGrantReturnsAnOauthError(t *testing.T) {
 		ownerClientStorage,
 		sessionStorage,
 	)
-	oauthSessionRequest := NewBasicOauthSessionRequest("test", make(map[string]string))
+	oauthSessionRequest := NewBasicOauthSessionRequest("test")
 	grant := &MockGrant{}
 	grant.On("Name").Return("test")
-	grant.On("GenerateSession", oauthSessionRequest).Return(nil, &RequiredValueMissingError{"value"})
+	grant.On("GenerateSession", oauthSessionRequest, server).Return(nil, &RequiredValueMissingError{"value"})
 	server.AddGrant(grant)
 
 	session, error := server.GrantOauthSession(oauthSessionRequest)
@@ -115,12 +115,12 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithAnAccessToken(t *te
 		sessionStorage,
 	)
 
-	oauthSessionRequest := NewBasicOauthSessionRequest("test", make(map[string]string))
+	oauthSessionRequest := NewBasicOauthSessionRequest("test")
 	session := &Session{}
 	session.AccessToken = &Token{}
 	grant := &MockGrant{}
 	grant.On("Name").Return("test")
-	grant.On("GenerateSession", oauthSessionRequest).Return(session, nil)
+	grant.On("GenerateSession", oauthSessionRequest, server).Return(session, nil)
 	server.AddGrant(grant)
 
 	sessionStorage.On("SaveSession", session).Return()
@@ -144,12 +144,12 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithAnAccessTokenAndGra
 		sessionStorage,
 	)
 
-	oauthSessionRequest := NewBasicOauthSessionRequest("test", make(map[string]string))
+	oauthSessionRequest := NewBasicOauthSessionRequest("test")
 	session := &Session{}
 	session.AccessToken = &Token{}
 	grant := &MockProcessingGrant{}
 	grant.On("Name").Return("test")
-	grant.On("GenerateSession", oauthSessionRequest).Return(session, nil)
+	grant.On("GenerateSession", oauthSessionRequest, server).Return(session, nil)
 	grant.On("ProcessSession", session).Return()
 	server.AddGrant(grant)
 
@@ -174,12 +174,12 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessToken(t 
 		sessionStorage,
 	)
 
-	oauthSessionRequest := NewBasicOauthSessionRequest("test", make(map[string]string))
+	oauthSessionRequest := NewBasicOauthSessionRequest("test")
 	session := &Session{}
 	token := &Token{}
 	grant := &MockGrant{}
 	grant.On("Name").Return("test")
-	grant.On("GenerateSession", oauthSessionRequest).Return(session, nil)
+	grant.On("GenerateSession", oauthSessionRequest, server).Return(session, nil)
 	server.AddGrant(grant)
 	tokenGenerator.On("GenerateAccessToken", server.Config(), grant).Return(token)
 	sessionStorage.On("SaveSession", session).Return()
@@ -206,12 +206,12 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessTokenAnd
 
 	server.Config().AllowRefresh = true
 
-	oauthSessionRequest := NewBasicOauthSessionRequest("test", make(map[string]string))
+	oauthSessionRequest := NewBasicOauthSessionRequest("test")
 	session := &Session{}
 	accessToken := &Token{}
 	grant := &MockGrant{}
 	grant.On("Name").Return("test")
-	grant.On("GenerateSession", oauthSessionRequest).Return(session, nil)
+	grant.On("GenerateSession", oauthSessionRequest, server).Return(session, nil)
 	grant.On("ShouldGenerateRefreshToken", session).Return(false)
 	server.AddGrant(grant)
 	tokenGenerator.On("GenerateAccessToken", server.Config(), grant).Return(accessToken)
@@ -239,13 +239,13 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessTokenAnd
 
 	server.Config().AllowRefresh = true
 
-	oauthSessionRequest := NewBasicOauthSessionRequest("test", make(map[string]string))
+	oauthSessionRequest := NewBasicOauthSessionRequest("test")
 	session := &Session{}
 	accessToken := &Token{}
 	refreshToken := &Token{}
 	grant := &MockGrant{}
 	grant.On("Name").Return("test")
-	grant.On("GenerateSession", oauthSessionRequest).Return(session, nil)
+	grant.On("GenerateSession", oauthSessionRequest, server).Return(session, nil)
 	grant.On("ShouldGenerateRefreshToken", session).Return(true)
 	server.AddGrant(grant)
 	tokenGenerator.On("GenerateAccessToken", server.Config(), grant).Return(accessToken)
@@ -275,13 +275,13 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessTokenAnd
 
 	server.Config().AllowRefresh = true
 
-	oauthSessionRequest := NewBasicOauthSessionRequest("test", make(map[string]string))
+	oauthSessionRequest := NewBasicOauthSessionRequest("test")
 	session := &Session{}
 	accessToken := &Token{}
 	refreshToken := &Token{}
 	grant := &MockProcessingGrant{}
 	grant.On("Name").Return("test")
-	grant.On("GenerateSession", oauthSessionRequest).Return(session, nil)
+	grant.On("GenerateSession", oauthSessionRequest, server).Return(session, nil)
 	grant.On("ShouldGenerateRefreshToken", session).Return(true)
 	grant.On("ProcessSession", session).Return()
 	server.AddGrant(grant)

@@ -13,7 +13,7 @@ type Owner struct {
 
 type Token struct {
 	Token   string
-	Expires int64
+	Expires int
 }
 
 type Scope struct {
@@ -22,7 +22,7 @@ type Scope struct {
 }
 
 const (
-	NoExpiration int64 = -1
+	NoExpiration int = -1
 )
 
 type AuthCode struct {
@@ -44,39 +44,6 @@ func NewSession() *Session {
 	session.Scopes = make(map[string]*Scope)
 	session.ExtraData = make(map[string]string)
 	return session
-}
-
-type OauthSessionRequest interface {
-	Grant() string
-	Get(key string) (string, bool)
-}
-
-type BasicOauthSessionRequest struct {
-	grant string
-	data  map[string]string
-}
-
-func NewBasicOauthSessionRequest(grant string, data map[string]string) *BasicOauthSessionRequest {
-
-	newData := make(map[string]string)
-
-	for key, value := range data {
-
-		newData[key] = value
-	}
-
-	return &BasicOauthSessionRequest{grant, newData}
-}
-
-func (request *BasicOauthSessionRequest) Get(name string) (string, bool) {
-
-	val, ok := request.data[name]
-	return val, ok
-}
-
-func (request *BasicOauthSessionRequest) Grant() string {
-
-	return request.grant
 }
 
 func NewOwnerFromClient(client *Client) *Owner {

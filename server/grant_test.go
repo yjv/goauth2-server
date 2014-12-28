@@ -8,7 +8,7 @@ import (
 
 func TestClientCredentialsGrant(t *testing.T) {
 
-	grant := &ClientCredentialsGrant{BaseGrant{123, nil}}
+	grant := &ClientCredentialsGrant{BaseGrant{123}}
 	assert.Equal(t, "client_credentials", grant.Name())
 	assert.Equal(t, grant.AccessTokenExpiration(), 123)
 	assert.False(t, grant.ShouldGenerateRefreshToken(&Session{}))
@@ -16,21 +16,20 @@ func TestClientCredentialsGrant(t *testing.T) {
 
 func TestClientCredentialsGrantGenerateSession(t *testing.T) {
 
-	grant := &ClientCredentialsGrant{BaseGrant{123, nil}}
+	grant := &ClientCredentialsGrant{BaseGrant{123}}
 	server := &MockServer{}
-	grant.SetServer(server)
-	client, params, _ := runClientLoadAssertions(t, grant, server)
+	client, request, _ := runClientLoadAssertions(t, grant, server)
 	session := NewSession()
 	session.Client = client
 	session.Owner = NewOwnerFromClient(client)
-	generatedSession, error := grant.GenerateSession(&BasicOauthSessionRequest{grant.Name(), params})
+	generatedSession, error := grant.GenerateSession(request, server)
 	assert.Equal(t, session, generatedSession)
 	assert.Nil(t, error)
 }
 
 func TestPasswordGrant(t *testing.T) {
 
-	grant := &PasswordGrant{BaseGrant{123, nil}}
+	grant := &PasswordGrant{BaseGrant{123}}
 	assert.Equal(t, "password", grant.Name())
 	assert.Equal(t, grant.AccessTokenExpiration(), 123)
 	assert.True(t, grant.ShouldGenerateRefreshToken(&Session{}))
@@ -38,30 +37,29 @@ func TestPasswordGrant(t *testing.T) {
 
 func TestPasswordGrantGenerateSession(t *testing.T) {
 
-	grant := &PasswordGrant{BaseGrant{123, nil}}
+	grant := &PasswordGrant{BaseGrant{123}}
 	server := &MockServer{}
-	grant.SetServer(server)
-	client, params, storage := runClientLoadAssertions(t, grant, server)
+	client, request, storage := runClientLoadAssertions(t, grant, server)
 
 	//username missing
-	session, error := grant.GenerateSession(&BasicOauthSessionRequest{grant.Name(), params})
+	session, error := grant.GenerateSession(request, server)
 	assert.Nil(t, session)
 	assert.Equal(t, &RequiredValueMissingError{"username"}, error)
 
-	params["username"] = "username"
+	request.Set("username", "username")
 
 	//password missing
-	session, error = grant.GenerateSession(&BasicOauthSessionRequest{grant.Name(), params})
+	session, error = grant.GenerateSession(request, server)
 	assert.Nil(t, session)
 	assert.Equal(t, &RequiredValueMissingError{"password"}, error)
 
-	params["password"] = "password"
+	request.Set("password", "password")
 
 	server.On("OwnerStorage").Return(storage)
-	storage.On("FindOwnerByUsernameAndPassword", params["username"], params["password"]).Return(nil, errors.New("error"))
+	storage.On("FindOwnerByUsernameAndPassword", "username", "password").Return(nil, errors.New("error"))
 
 	//owner failed to load
-	session, error = grant.GenerateSession(&BasicOauthSessionRequest{grant.Name(), params})
+	session, error = grant.GenerateSession(request, server)
 	assert.Nil(t, session)
 	assert.Equal(t, &StorageSearchFailedError{"owner", errors.New("error")}, error)
 
@@ -70,15 +68,15 @@ func TestPasswordGrantGenerateSession(t *testing.T) {
 		"name",
 	}
 
-	params["username"] = "right_username"
-	storage.On("FindOwnerByUsernameAndPassword", params["username"], params["password"]).Return(owner, nil)
+	request.Set("username", "right_username")
+	storage.On("FindOwnerByUsernameAndPassword", "right_username", "password").Return(owner, nil)
 
 	expectedSession := NewSession()
 	expectedSession.Client = client
 	expectedSession.Owner = owner
 
 	//client loads
-	session, error = grant.GenerateSession(&BasicOauthSessionRequest{grant.Name(), params})
+	session, error = grant.GenerateSession(request, server)
 
 	assert.Equal(t, expectedSession, session)
 	assert.Nil(t, error)
@@ -86,7 +84,7 @@ func TestPasswordGrantGenerateSession(t *testing.T) {
 
 func TestRefreshGrant(t *testing.T) {
 
-	grant := &RefreshTokenGrant{BaseGrant{123, nil}, false}
+	grant := &RefreshTokenGrant{BaseGrant{123}, false}
 	assert.Equal(t, "refresh_token", grant.Name())
 	assert.Equal(t, grant.AccessTokenExpiration(), 123)
 	assert.False(t, grant.ShouldGenerateRefreshToken(&Session{}))
@@ -100,23 +98,21 @@ func TestRefreshGrantGenerateSession(t *testing.T) {
 	server := &MockServer{}
 	config := NewConfig()
 	server.On("Config").Return(config)
-	grant.SetServer(server)
-	assert.True(t, config.AllowRefresh)
-	client, params, _ := runClientLoadAssertions(t, grant, server)
+	client, request, _ := runClientLoadAssertions(t, grant, server)
 
 	//refresh_token missing
-	session, error := grant.GenerateSession(&BasicOauthSessionRequest{grant.Name(), params})
+	session, error := grant.GenerateSession(request, server)
 	assert.Nil(t, session)
 	assert.Equal(t, &RequiredValueMissingError{"refresh_token"}, error)
 
-	params["refresh_token"] = "refresh_token"
+	request.Set("refresh_token", "refresh_token")
 
 	storage := &MockSessionStorage{}
 	server.On("SessionStorage").Return(storage)
-	storage.On("FindSessionByRefreshToken", params["refresh_token"]).Return(nil, errors.New("error"))
+	storage.On("FindSessionByRefreshToken", "refresh_token").Return(nil, errors.New("error"))
 
 	//owner failed to load
-	session, error = grant.GenerateSession(&BasicOauthSessionRequest{grant.Name(), params})
+	session, error = grant.GenerateSession(request, server)
 	assert.Nil(t, session)
 	assert.Equal(t, &StorageSearchFailedError{"session", errors.New("error")}, error)
 
@@ -131,17 +127,17 @@ func TestRefreshGrantGenerateSession(t *testing.T) {
 		"redirect_uri",
 	}
 
-	params["refresh_token"] = "good_refresh_token"
+	request.Set("refresh_token", "good_refresh_token")
 
 	expectedSession := NewSession()
 	expectedSession.Client = client
 	expectedSession.Owner = owner
 	expectedSession.RefreshToken = &Token{}
 	returnedSession := &(*expectedSession)
-	storage.On("FindSessionByRefreshToken", params["refresh_token"]).Return(returnedSession, nil)
+	storage.On("FindSessionByRefreshToken", "good_refresh_token").Return(returnedSession, nil)
 
 	//session loads
-	session, error = grant.GenerateSession(&BasicOauthSessionRequest{grant.Name(), params})
+	session, error = grant.GenerateSession(request, server)
 
 	assert.Equal(t, expectedSession, session)
 	assert.Nil(t, error)
@@ -150,38 +146,37 @@ func TestRefreshGrantGenerateSession(t *testing.T) {
 	grant.RotateRefreshTokens = true
 
 	//session loads
-	session, error = grant.GenerateSession(&BasicOauthSessionRequest{grant.Name(), params})
+	session, error = grant.GenerateSession(request, server)
 
 	assert.Equal(t, expectedSession, session)
 	assert.Nil(t, error)
 }
 
-func runClientLoadAssertions(t *testing.T, grant Grant, server *MockServer) (*Client, map[string]string, *MockOwnerClientStorage) {
+func runClientLoadAssertions(t *testing.T, grant Grant, server *MockServer) (*Client, *BasicOauthSessionRequest, *MockOwnerClientStorage) {
 
 	storage := &MockOwnerClientStorage{}
 	server.On("ClientStorage").Return(storage)
 
 	//no client id
-	session, error := grant.GenerateSession(&BasicOauthSessionRequest{})
+	session, error := grant.GenerateSession(&BasicOauthSessionRequest{}, server)
 	assert.Nil(t, session)
 	assert.Equal(t, &RequiredValueMissingError{"client_id"}, error)
 
-	params := make(map[string]string)
-	grantName := grant.Name()
+	request := NewBasicOauthSessionRequest(grant.Name())
 
-	params["client_id"] = "client_id"
+	request.Set("client_id", "client_id")
 
 	//no client secret
-	session, error = grant.GenerateSession(&BasicOauthSessionRequest{grantName, params})
+	session, error = grant.GenerateSession(request, server)
 	assert.Nil(t, session)
 	assert.Equal(t, &RequiredValueMissingError{"client_secret"}, error)
 
-	params["client_secret"] = "client_secret"
+	request.Set("client_secret", "client_secret")
 
-	storage.On("FindClientByIdAndSecret", params["client_id"], params["client_secret"]).Return(nil, errors.New("error"))
+	storage.On("FindClientByIdAndSecret", "client_id", "client_secret").Return(nil, errors.New("error"))
 
 	//client failed to load
-	session, error = grant.GenerateSession(&BasicOauthSessionRequest{grantName, params})
+	session, error = grant.GenerateSession(request, server)
 	assert.Nil(t, session)
 	assert.Equal(t, &StorageSearchFailedError{"client", errors.New("error")}, error)
 
@@ -191,9 +186,9 @@ func runClientLoadAssertions(t *testing.T, grant Grant, server *MockServer) (*Cl
 		"redirect_uri",
 	}
 
-	params["client_id"] = "good_client_id"
+	request.Set("client_id", "good_client_id")
 
-	storage.On("FindClientByIdAndSecret", params["client_id"], params["client_secret"]).Return(client, nil)
+	storage.On("FindClientByIdAndSecret", "good_client_id", "client_secret").Return(client, nil)
 
-	return client, params, storage
+	return client, request, storage
 }

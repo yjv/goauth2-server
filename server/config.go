@@ -1,8 +1,8 @@
 package server
 
 type Config struct {
-	DefaultAccessTokenExpires  int64
-	DefaultRefreshTokenExpires int64
+	DefaultAccessTokenExpires  int
+	DefaultRefreshTokenExpires int
 	AllowRefresh               bool
 }
 

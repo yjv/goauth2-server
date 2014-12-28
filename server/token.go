@@ -24,7 +24,7 @@ type DefaultTokenGenerator struct {
 
 func (generator *DefaultTokenGenerator) GenerateAccessToken(config *Config, grant Grant) *Token {
 
-	var expiration int64
+	var expiration int
 
 	expiration = grant.AccessTokenExpiration()
 
@@ -35,19 +35,19 @@ func (generator *DefaultTokenGenerator) GenerateAccessToken(config *Config, gran
 
 	return &Token{
 		generator.tokenIdGenerator(),
-		time.Now().UTC().Add(time.Duration(expiration) * time.Second).Unix(),
+		int(time.Now().UTC().Add(time.Duration(expiration) * time.Second).Unix()),
 	}
 }
 
 func (generator *DefaultTokenGenerator) GenerateRefreshToken(config *Config, grant Grant) *Token {
 
-	var expiration int64
+	var expiration int
 
 	expiration = config.DefaultRefreshTokenExpires
 
 	return &Token{
 		generator.tokenIdGenerator(),
-		time.Now().UTC().Add(time.Duration(expiration) * time.Second).Unix(),
+		int(time.Now().UTC().Add(time.Duration(expiration) * time.Second).Unix()),
 	}
 }
 
