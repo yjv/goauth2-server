@@ -126,7 +126,7 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithAnAccessToken(t *te
 	)
 
 	oauthSessionRequest := NewBasicOauthSessionRequest("test")
-	session := &Session{}
+	session := NewSession()
 	session.AccessToken = &Token{}
 	grant := &MockGrant{}
 	grant.On("Name").Return("test")
@@ -157,7 +157,7 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithAnAccessTokenAndGra
 	)
 
 	oauthSessionRequest := NewBasicOauthSessionRequest("test")
-	session := &Session{}
+	session := NewSession()
 	session.AccessToken = &Token{}
 	grant := &MockProcessingGrant{}
 	grant.On("Name").Return("test")
@@ -189,7 +189,7 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessToken(t 
 	)
 
 	oauthSessionRequest := NewBasicOauthSessionRequest("test")
-	session := &Session{}
+	session := NewSession()
 	token := &Token{}
 	grant := &MockGrant{}
 	grant.On("Name").Return("test")
@@ -223,7 +223,7 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessTokenAnd
 	server.Config().AllowRefresh = true
 
 	oauthSessionRequest := NewBasicOauthSessionRequest("test")
-	session := &Session{}
+	session := NewSession()
 	accessToken := &Token{}
 	grant := &MockGrant{}
 	grant.On("Name").Return("test")
@@ -258,7 +258,7 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessTokenAnd
 	server.Config().AllowRefresh = true
 
 	oauthSessionRequest := NewBasicOauthSessionRequest("test")
-	session := &Session{}
+	session := NewSession()
 	accessToken := &Token{}
 	refreshToken := &Token{}
 	grant := &MockGrant{}
@@ -296,7 +296,7 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessTokenAnd
 	server.Config().AllowRefresh = true
 
 	oauthSessionRequest := NewBasicOauthSessionRequest("test")
-	session := &Session{}
+	session := NewSession()
 	accessToken := &Token{}
 	refreshToken := &Token{}
 	grant := &MockProcessingGrant{}

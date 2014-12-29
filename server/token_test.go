@@ -58,36 +58,3 @@ func GeneratorFuncMock() string {
 
 	return "hello"
 }
-
-type TestGrant struct {
-	Session                         *Session
-	Error                           error
-	AccessTokenExpirationValue      int
-	ShouldGenerateRefreshTokenValue bool
-	Server                          Server
-}
-
-func (grant *TestGrant) GenerateSession(oauthSessionRequest OauthSessionRequest) (*Session, error) {
-
-	return grant.Session, grant.Error
-}
-
-func (grant *TestGrant) Name() string {
-
-	return "test"
-}
-
-func (grant *TestGrant) AccessTokenExpiration() int {
-
-	return grant.AccessTokenExpirationValue
-}
-
-func (grant *TestGrant) SetServer(server Server) {
-
-	grant.Server = server
-}
-
-func (grant *TestGrant) ShouldGenerateRefreshToken(session *Session) bool {
-
-	return grant.ShouldGenerateRefreshTokenValue
-}

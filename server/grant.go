@@ -1,5 +1,9 @@
 package server
 
+import (
+	"fmt"
+)
+
 type Grant interface {
 	GenerateSession(oauthSessionRequest OauthSessionRequest, server Server) (*Session, error)
 	Name() string
@@ -106,7 +110,7 @@ func (grant *PasswordGrant) ShouldGenerateRefreshToken(session *Session) bool {
 type RefreshTokenGrant struct {
 	BaseGrant
 	RotateRefreshTokens bool
-	RefreshClientAndOwner bool
+	RefreshOwner bool
 }
 
 func (grant *RefreshTokenGrant) GenerateSession(oauthSessionRequest OauthSessionRequest, server Server) (*Session, error) {
@@ -129,15 +133,17 @@ func (grant *RefreshTokenGrant) GenerateSession(oauthSessionRequest OauthSession
 		return nil, &StorageSearchFailedError{"session", error}
 	}
 
-	if grant.RefreshClientAndOwner {
+	if session.Client.Id != client.Id {
+		return nil, &StorageSearchFailedError{"session", fmt.Errorf(
+			"client id %s on sessoin did not match client id %s found with client credentials",
+			session.Client.Id,
+			client.Id,
+		)}
+	}
 
-		client, error := server.ClientStorage().RefreshClient(session.Client)
+	session.Client = client
 
-		if client == nil {
-			return nil, &StorageSearchFailedError{"client", error}
-		}
-
-		session.Client = client
+	if grant.RefreshOwner {
 
 		owner, error := server.OwnerStorage().RefreshOwner(session.Owner)
 
@@ -148,8 +154,8 @@ func (grant *RefreshTokenGrant) GenerateSession(oauthSessionRequest OauthSession
 		session.Owner = owner
 	}
 
-	//make sure the requested scopes are already in the session cant add new scopes
-	//actual instantiation of the scopes will happen in the server
+	//make sure the requested scopes are already in the session. Cant add new scopes.
+	//Actual instantiation of the scopes will happen in the server
 	for _, scopeName := range oauthSessionRequest.Get("scopes") {
 		_, ok := session.Scopes[scopeName]
 
@@ -158,6 +164,8 @@ func (grant *RefreshTokenGrant) GenerateSession(oauthSessionRequest OauthSession
 		}
 	}
 
+	//clear scopes so only the request scopes are assigned
+	session.Scopes = make(map[string]*Scope)
 	session.AccessToken = nil
 
 	if grant.RotateRefreshTokens {

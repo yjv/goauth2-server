@@ -11,7 +11,7 @@ func TestClientCredentialsGrant(t *testing.T) {
 	grant := &ClientCredentialsGrant{BaseGrant{123}}
 	assert.Equal(t, "client_credentials", grant.Name())
 	assert.Equal(t, grant.AccessTokenExpiration(), 123)
-	assert.False(t, grant.ShouldGenerateRefreshToken(&Session{}))
+	assert.False(t, grant.ShouldGenerateRefreshToken(NewSession()))
 }
 
 func TestClientCredentialsGrantGenerateSession(t *testing.T) {
@@ -32,7 +32,7 @@ func TestPasswordGrant(t *testing.T) {
 	grant := &PasswordGrant{BaseGrant{123}}
 	assert.Equal(t, "password", grant.Name())
 	assert.Equal(t, grant.AccessTokenExpiration(), 123)
-	assert.True(t, grant.ShouldGenerateRefreshToken(&Session{}))
+	assert.True(t, grant.ShouldGenerateRefreshToken(NewSession()))
 }
 
 func TestPasswordGrantGenerateSession(t *testing.T) {
@@ -87,9 +87,9 @@ func TestRefreshGrant(t *testing.T) {
 	grant := &RefreshTokenGrant{BaseGrant{123}, false, false}
 	assert.Equal(t, "refresh_token", grant.Name())
 	assert.Equal(t, grant.AccessTokenExpiration(), 123)
-	assert.False(t, grant.ShouldGenerateRefreshToken(&Session{}))
+	assert.False(t, grant.ShouldGenerateRefreshToken(NewSession()))
 	grant.RotateRefreshTokens = true
-	assert.True(t, grant.ShouldGenerateRefreshToken(&Session{}))
+	assert.True(t, grant.ShouldGenerateRefreshToken(NewSession()))
 }
 
 func TestRefreshGrantGenerateSession(t *testing.T) {
@@ -98,7 +98,7 @@ func TestRefreshGrantGenerateSession(t *testing.T) {
 	server := &MockServer{}
 	config := NewConfig()
 	server.On("Config").Return(config)
-	client, request, _ := runClientLoadAssertions(t, grant, server)
+	client, request, clientOwnerStorage := runClientLoadAssertions(t, grant, server)
 
 	//refresh_token missing
 	session, error := grant.GenerateSession(request, server)
@@ -116,24 +116,77 @@ func TestRefreshGrantGenerateSession(t *testing.T) {
 	assert.Nil(t, session)
 	assert.Equal(t, &StorageSearchFailedError{"session", errors.New("error")}, error)
 
-	owner := &Owner{
-		"id",
-		"name",
-	}
-
-	client = &Client{
-		"id",
-		"name",
-		"redirect_uri",
-	}
-
 	request.Set("refresh_token", "good_refresh_token")
+
+	returnedSession := NewSession()
+	returnedSession.Client = &Client{
+		"id2",
+		"name",
+		"redr",
+	}
+	returnedSession.Owner = &Owner{
+		"id",
+		"name",
+	}
+	returnedSession.RefreshToken = &Token{}
+	storage.On("FindSessionByRefreshToken", "good_refresh_token").Return(returnedSession, nil).Times(1)
+
+	//session loads but clients dont match
+	session, error = grant.GenerateSession(request, server)
+
+	assert.Nil(t, session)
+	assert.IsType(t, &StorageSearchFailedError{}, error)
+
+	returnedSession = NewSession()
+	returnedSession.Client = client
+	returnedSession.Owner = &Owner{
+		"id",
+		"name",
+	}
+	returnedSession.RefreshToken = &Token{}
+	storage.On("FindSessionByRefreshToken", "good_refresh_token").Return(returnedSession, nil).Times(1)
+
+	server.On("OwnerStorage").Return(clientOwnerStorage)
+
+	clientOwnerStorage.On("RefreshOwner", returnedSession.Owner).Return(nil, errors.New("bad")).Times(1)
+
+	grant.RefreshOwner = true
+
+	//session loads but owner refresh fails
+	session, error = grant.GenerateSession(request, server)
+
+	assert.Nil(t, session)
+	assert.Equal(t, &StorageSearchFailedError{"owner", errors.New("bad")}, error)
 
 	expectedSession := NewSession()
 	expectedSession.Client = client
-	expectedSession.Owner = owner
+	expectedSession.Owner = &Owner{
+		"id",
+		"name",
+	}
 	expectedSession.RefreshToken = &Token{}
-	returnedSession := &(*expectedSession)
+	returnedSession = &(*expectedSession)
+
+	storage.On("FindSessionByRefreshToken", "good_refresh_token").Return(returnedSession, nil).Times(1)
+	clientOwnerStorage.On("RefreshOwner", returnedSession.Owner).Return(returnedSession.Owner, nil).Times(1)
+
+	//session loads
+	session, error = grant.GenerateSession(request, server)
+
+	assert.Equal(t, expectedSession, session)
+	assert.Nil(t, error)
+
+	grant.RefreshOwner = false
+
+	expectedSession = NewSession()
+	expectedSession.Client = client
+	expectedSession.Owner = &Owner{
+		"id",
+		"name",
+	}
+	expectedSession.RefreshToken = &Token{}
+	returnedSession = &(*expectedSession)
+
 	storage.On("FindSessionByRefreshToken", "good_refresh_token").Return(returnedSession, nil)
 
 	//session loads
@@ -145,7 +198,25 @@ func TestRefreshGrantGenerateSession(t *testing.T) {
 	expectedSession.RefreshToken = nil
 	grant.RotateRefreshTokens = true
 
-	//session loads
+	//session loads and refresh token is rotated
+	session, error = grant.GenerateSession(request, server)
+
+	assert.Equal(t, expectedSession, session)
+	assert.Nil(t, error)
+
+	returnedSession.Scopes["scope1"] = &Scope{}
+	returnedSession.Scopes["scope3"] = &Scope{}
+	request.AddAll("scopes", []string{"scope1","scope2","scope3"})
+
+	//scopes not on session requested
+	session, error = grant.GenerateSession(request, server)
+
+	assert.Nil(t, session)
+	assert.Equal(t, &InvalidScopeError{"scope2", nil}, error)
+
+	returnedSession.Scopes["scope2"] = &Scope{}
+
+	//scopes all on session requested
 	session, error = grant.GenerateSession(request, server)
 
 	assert.Equal(t, expectedSession, session)
@@ -186,9 +257,9 @@ func runClientLoadAssertions(t *testing.T, grant Grant, server *MockServer) (*Cl
 		"redirect_uri",
 	}
 
-	request.Set("client_id", "good_client_id")
+	request.Set("client_secret", "good_client_secret")
 
-	storage.On("FindClientByIdAndSecret", "good_client_id", "client_secret").Return(client, nil)
+	storage.On("FindClientByIdAndSecret", "client_id", "good_client_secret").Return(client, nil)
 
 	return client, request, storage
 }
