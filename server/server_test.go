@@ -316,3 +316,77 @@ func TestServerGrantOauthSessionWhereGrantReturnsASessionWithoutAnAccessTokenAnd
 	assert.Equal(t, refreshToken, returnedSession.RefreshToken)
 	assert.Nil(t, error)
 }
+
+func TestServerGrantOauthSessionWhereScopeIsInvalid(t *testing.T) {
+
+	ownerClientStorage := &MockOwnerClientStorage{}
+	sessionStorage := &MockSessionStorage{}
+	tokenGenerator := &MockTokenGenerator{}
+	scopeStorage := &MockScopeStorage{}
+
+	server := NewWithTokenGenerator(
+		tokenGenerator,
+		ownerClientStorage,
+		ownerClientStorage,
+		sessionStorage,
+		scopeStorage,
+	)
+
+	oauthSessionRequest := NewBasicOauthSessionRequest("test")
+	oauthSessionRequest.AddAll("scopes", []string{"scope1", "scope2", "scope3"})
+	session := NewSession()
+	session.AccessToken = &Token{}
+	grant := &MockGrant{}
+	grant.On("Name").Return("test")
+	grant.On("GenerateSession", oauthSessionRequest, server).Return(session, nil)
+	scopeStorage.On("FindScopeByName", "scope1").Return(&Scope{}, nil)
+	scopeStorage.On("FindScopeByName", "scope2").Return(nil, errors.New("booo"))
+	server.AddGrant(grant)
+
+	returnedSession, error := server.GrantOauthSession(oauthSessionRequest)
+
+	assert.Equal(t, &InvalidScopeError{"scope2", errors.New("booo")}, error)
+	assert.Nil(t, returnedSession)
+}
+
+func TestServerGrantOauthSessionWhereScopeAllValid(t *testing.T) {
+
+	ownerClientStorage := &MockOwnerClientStorage{}
+	sessionStorage := &MockSessionStorage{}
+	tokenGenerator := &MockTokenGenerator{}
+	scopeStorage := &MockScopeStorage{}
+
+	server := NewWithTokenGenerator(
+		tokenGenerator,
+		ownerClientStorage,
+		ownerClientStorage,
+		sessionStorage,
+		scopeStorage,
+	)
+
+	scope1 := &Scope{"id", "scope1"}
+	scope2 := &Scope{"id", "scope2"}
+	scope3 := &Scope{"id", "scope3"}
+
+	oauthSessionRequest := NewBasicOauthSessionRequest("test")
+	oauthSessionRequest.AddAll("scopes", []string{"scope1", "scope2", "scope3"})
+	session := NewSession()
+	session.AccessToken = &Token{}
+	scopes := make(map[string]*Scope)
+	scopes["scope1"] = scope1
+	scopes["scope2"] = scope2
+	scopes["scope3"] = scope3
+	grant := &MockGrant{}
+	grant.On("Name").Return("test")
+	grant.On("GenerateSession", oauthSessionRequest, server).Return(session, nil)
+	scopeStorage.On("FindScopeByName", "scope1").Return(scope1, nil)
+	scopeStorage.On("FindScopeByName", "scope2").Return(scope2, nil)
+	scopeStorage.On("FindScopeByName", "scope3").Return(scope3, nil)
+	server.AddGrant(grant)
+	sessionStorage.On("SaveSession", session).Return()
+
+	returnedSession, error := server.GrantOauthSession(oauthSessionRequest)
+
+	assert.Equal(t, scopes, returnedSession.Scopes)
+	assert.Nil(t, error)
+}
