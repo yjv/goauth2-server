@@ -40,7 +40,7 @@ func (request *RequestFormOauthSessionRequest) Grant() string {
 
 func (request *RequestFormOauthSessionRequest) parseRequestForm() {
 
-	err := request.ParseForm()
+	err := request.request.ParseForm()
 
 	if err != nil {
 

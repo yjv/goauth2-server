@@ -50,7 +50,7 @@ func (storage *MemoryOwnerClientStorage) FindClientByIdAndSecret(clientId string
 	return client, nil
 }
 
-func (storage *MemoryOwnerClientStorage) RefreshClient(client *Client) (*Client, error) {
+func (storage *MemoryOwnerClientStorage) RefreshClient(client *server.Client) (*server.Client, error) {
 
 	client, exists := storage.clientsByClientId[client.Id]
 
@@ -86,7 +86,7 @@ func (storage *MemoryOwnerClientStorage) FindOwnerByUsernameAndPassword(username
 	return owner, nil
 }
 
-func (storage *MemoryOwnerClientStorage) RefreshOwner(owner *Owner) (*Owner, error) {
+func (storage *MemoryOwnerClientStorage) RefreshOwner(owner *server.Owner) (*server.Owner, error) {
 
 	owner, exists := storage.ownersByUsername[owner.Id]
 
@@ -126,7 +126,7 @@ func (storage *MemorySessionStorage) FindSessionByAccessToken(accessToken string
 
 		if storage.isExpired(session.RefreshToken) {
 
-			go storage.Delete(session)
+			go storage.DeleteSession(session)
 		}
 
 		return nil, fmt.Errorf("Refresh token is expired")
@@ -146,7 +146,7 @@ func (storage *MemorySessionStorage) FindSessionByRefreshToken(refreshToken stri
 
 	if storage.isExpired(session.RefreshToken) {
 
-		go storage.Delete(session)
+		go storage.DeleteSession(session)
 		return nil, fmt.Errorf("Refresh token is expired")
 	}
 
@@ -171,7 +171,7 @@ func (storage *MemorySessionStorage) DeleteSession(session *server.Session) {
 
 func (storage *MemorySessionStorage) isExpired(token *server.Token) bool {
 
-	return token == nil || (token.Expires != server.NoExpiration && token.Expires < time.Now().UTC().Unix())
+	return token == nil || (token.Expires != server.NoExpiration && token.Expires < int(time.Now().UTC().Unix()))
 }
 
 func NewMemorySessionStorage() *MemorySessionStorage {
@@ -183,12 +183,12 @@ func NewMemorySessionStorage() *MemorySessionStorage {
 }
 
 type MemoryScopeStorage struct {
-	scopes map[string]string
+	scopes map[string]*server.Scope
 }
 
 func (storage *MemoryScopeStorage) FindScopeByName(name string) (*server.Scope, error) {
 
-	scope, ok := storage.scopes
+	scope, ok := storage.scopes[name]
 
 	if !ok {
 		return nil, fmt.Errorf("Scope named %s not found", name)
@@ -197,13 +197,13 @@ func (storage *MemoryScopeStorage) FindScopeByName(name string) (*server.Scope, 
 	return scope, nil
 }
 
-func (storage *MemoryScopeStorage) Set(name string, scope *Scope) *MemoryScopeStorage {
+func (storage *MemoryScopeStorage) Set(name string, scope *server.Scope) *MemoryScopeStorage {
 
 	storage.scopes[name] = scope
 	return storage
 }
 
-func NewMemoryScopeStorage() *MemorySessionStorage {
+func NewMemoryScopeStorage() *MemoryScopeStorage {
 
 	return &MemoryScopeStorage{
 		make(map[string]*server.Scope),
