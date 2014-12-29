@@ -41,7 +41,6 @@ func TestPasswordGrantGenerateSessionWithUsernameMissing(t *testing.T) {
 	server := &MockServer{}
 	_, request, _ := runClientLoadAssertions(t, grant, server)
 
-	//username missing
 	session, error := grant.GenerateSession(request, server)
 	assert.Nil(t, session)
 	assert.Equal(t, &RequiredValueMissingError{"username"}, error)
@@ -55,7 +54,6 @@ func TestPasswordGrantGenerateSessionWithPasswordMissing(t *testing.T) {
 
 	request.Set("username", "username")
 
-	//password missing
 	session, error := grant.GenerateSession(request, server)
 	assert.Nil(t, session)
 	assert.Equal(t, &RequiredValueMissingError{"password"}, error)
@@ -73,7 +71,6 @@ func TestPasswordGrantGenerateSessionWhereOwnerFailedToLoad(t *testing.T) {
 	server.On("OwnerStorage").Return(storage)
 	storage.On("FindOwnerByUsernameAndPassword", "username", "password").Return(nil, errors.New("error"))
 
-	//owner failed to load
 	session, error := grant.GenerateSession(request, server)
 	assert.Nil(t, session)
 	assert.Equal(t, &StorageSearchFailedError{"owner", errors.New("error")}, error)
@@ -102,7 +99,6 @@ func TestPasswordGrantGenerateSessionWhereAllGood(t *testing.T) {
 	expectedSession.Client = client
 	expectedSession.Owner = owner
 
-	//client loads
 	session, error := grant.GenerateSession(request, server)
 
 	assert.Equal(t, expectedSession, session)
@@ -119,18 +115,26 @@ func TestRefreshGrant(t *testing.T) {
 	assert.True(t, grant.ShouldGenerateRefreshToken(NewSession()))
 }
 
-func TestRefreshGrantGenerateSession(t *testing.T) {
+func TestRefreshGrantGenerateSessionWithRefreshTokenMissing(t *testing.T) {
 
 	grant := &RefreshTokenGrant{}
 	server := &MockServer{}
 	config := NewConfig()
 	server.On("Config").Return(config)
-	client, request, clientOwnerStorage := runClientLoadAssertions(t, grant, server)
+	_, request, _ := runClientLoadAssertions(t, grant, server)
 
-	//refresh_token missing
 	session, error := grant.GenerateSession(request, server)
 	assert.Nil(t, session)
 	assert.Equal(t, &RequiredValueMissingError{"refresh_token"}, error)
+}
+
+func TestRefreshGrantGenerateSessionWhereSessionFailsToLoad(t *testing.T) {
+
+	grant := &RefreshTokenGrant{}
+	server := &MockServer{}
+	config := NewConfig()
+	server.On("Config").Return(config)
+	_, request, _ := runClientLoadAssertions(t, grant, server)
 
 	request.Set("refresh_token", "refresh_token")
 
@@ -139,9 +143,23 @@ func TestRefreshGrantGenerateSession(t *testing.T) {
 	storage.On("FindSessionByRefreshToken", "refresh_token").Return(nil, errors.New("error"))
 
 	//owner failed to load
-	session, error = grant.GenerateSession(request, server)
+	session, error := grant.GenerateSession(request, server)
 	assert.Nil(t, session)
 	assert.Equal(t, &StorageSearchFailedError{"session", errors.New("error")}, error)
+}
+
+func TestRefreshGrantGenerateSessionWhereSessionLoadsButClientsDontMatch(t *testing.T) {
+
+	grant := &RefreshTokenGrant{}
+	server := &MockServer{}
+	config := NewConfig()
+	server.On("Config").Return(config)
+	_, request, _ := runClientLoadAssertions(t, grant, server)
+
+	request.Set("refresh_token", "refresh_token")
+
+	storage := &MockSessionStorage{}
+	server.On("SessionStorage").Return(storage)
 
 	request.Set("refresh_token", "good_refresh_token")
 
@@ -159,12 +177,28 @@ func TestRefreshGrantGenerateSession(t *testing.T) {
 	storage.On("FindSessionByRefreshToken", "good_refresh_token").Return(returnedSession, nil).Times(1)
 
 	//session loads but clients dont match
-	session, error = grant.GenerateSession(request, server)
+	session, error := grant.GenerateSession(request, server)
 
 	assert.Nil(t, session)
 	assert.IsType(t, &StorageSearchFailedError{}, error)
+}
 
-	returnedSession = NewSession()
+func TestRefreshGrantGenerateSessionLoadsButOwnerRefreshFails(t *testing.T) {
+
+	grant := &RefreshTokenGrant{}
+	server := &MockServer{}
+	config := NewConfig()
+	server.On("Config").Return(config)
+	client, request, clientOwnerStorage := runClientLoadAssertions(t, grant, server)
+
+	request.Set("refresh_token", "refresh_token")
+
+	storage := &MockSessionStorage{}
+	server.On("SessionStorage").Return(storage)
+
+	request.Set("refresh_token", "good_refresh_token")
+
+	returnedSession := NewSession()
 	returnedSession.Client = client
 	returnedSession.Owner = &Owner{
 		"id",
@@ -180,10 +214,30 @@ func TestRefreshGrantGenerateSession(t *testing.T) {
 	grant.RefreshOwner = true
 
 	//session loads but owner refresh fails
-	session, error = grant.GenerateSession(request, server)
+	session, error := grant.GenerateSession(request, server)
 
 	assert.Nil(t, session)
 	assert.Equal(t, &StorageSearchFailedError{"owner", errors.New("bad")}, error)
+}
+
+func TestRefreshGrantGenerateSessionWhereOwnerRefreshSucceeds(t *testing.T) {
+
+	grant := &RefreshTokenGrant{}
+	server := &MockServer{}
+	config := NewConfig()
+	server.On("Config").Return(config)
+	client, request, clientOwnerStorage := runClientLoadAssertions(t, grant, server)
+
+	request.Set("refresh_token", "refresh_token")
+
+	storage := &MockSessionStorage{}
+	server.On("SessionStorage").Return(storage)
+
+	request.Set("refresh_token", "good_refresh_token")
+
+	server.On("OwnerStorage").Return(clientOwnerStorage)
+
+	grant.RefreshOwner = true
 
 	expectedSession := NewSession()
 	expectedSession.Client = client
@@ -192,59 +246,158 @@ func TestRefreshGrantGenerateSession(t *testing.T) {
 		"name",
 	}
 	expectedSession.RefreshToken = &Token{}
-	returnedSession = &(*expectedSession)
+	returnedSession := &(*expectedSession)
 
 	storage.On("FindSessionByRefreshToken", "good_refresh_token").Return(returnedSession, nil).Times(1)
 	clientOwnerStorage.On("RefreshOwner", returnedSession.Owner).Return(returnedSession.Owner, nil).Times(1)
 
 	//session loads
-	session, error = grant.GenerateSession(request, server)
+	session, error := grant.GenerateSession(request, server)
 
 	assert.Equal(t, expectedSession, session)
 	assert.Nil(t, error)
+}
 
-	grant.RefreshOwner = false
+func TestRefreshGrantGenerateSessionWhereSessionLoadsWithoutOwnerRefresh(t *testing.T) {
 
-	expectedSession = NewSession()
+	grant := &RefreshTokenGrant{}
+	server := &MockServer{}
+	config := NewConfig()
+	server.On("Config").Return(config)
+	client, request, _ := runClientLoadAssertions(t, grant, server)
+
+	request.Set("refresh_token", "refresh_token")
+
+	storage := &MockSessionStorage{}
+	server.On("SessionStorage").Return(storage)
+
+	request.Set("refresh_token", "good_refresh_token")
+
+	expectedSession := NewSession()
 	expectedSession.Client = client
 	expectedSession.Owner = &Owner{
 		"id",
 		"name",
 	}
 	expectedSession.RefreshToken = &Token{}
-	returnedSession = &(*expectedSession)
+	returnedSession := &(*expectedSession)
 
 	storage.On("FindSessionByRefreshToken", "good_refresh_token").Return(returnedSession, nil)
 
 	//session loads
-	session, error = grant.GenerateSession(request, server)
+	session, error := grant.GenerateSession(request, server)
 
 	assert.Equal(t, expectedSession, session)
 	assert.Nil(t, error)
+}
+
+func TestRefreshGrantGenerateSessionWhereSessionLoadsAndRefreshTokensAreSupposedToBeRotated(t *testing.T) {
+
+	grant := &RefreshTokenGrant{}
+	server := &MockServer{}
+	config := NewConfig()
+	server.On("Config").Return(config)
+	client, request, _ := runClientLoadAssertions(t, grant, server)
+
+	request.Set("refresh_token", "refresh_token")
+
+	storage := &MockSessionStorage{}
+	server.On("SessionStorage").Return(storage)
+
+	request.Set("refresh_token", "good_refresh_token")
+
+	expectedSession := NewSession()
+	expectedSession.Client = client
+	expectedSession.Owner = &Owner{
+		"id",
+		"name",
+	}
+	expectedSession.RefreshToken = &Token{}
+	returnedSession := &(*expectedSession)
+
+	storage.On("FindSessionByRefreshToken", "good_refresh_token").Return(returnedSession, nil)
 
 	expectedSession.RefreshToken = nil
 	grant.RotateRefreshTokens = true
 
 	//session loads and refresh token is rotated
-	session, error = grant.GenerateSession(request, server)
+	session, error := grant.GenerateSession(request, server)
 
 	assert.Equal(t, expectedSession, session)
 	assert.Nil(t, error)
+}
+
+func TestRefreshGrantGenerateSessionWhereScopesRequestedNotOnSession(t *testing.T) {
+
+	grant := &RefreshTokenGrant{}
+	server := &MockServer{}
+	config := NewConfig()
+	server.On("Config").Return(config)
+	client, request, _ := runClientLoadAssertions(t, grant, server)
+
+	request.Set("refresh_token", "refresh_token")
+
+	storage := &MockSessionStorage{}
+	server.On("SessionStorage").Return(storage)
+
+	request.Set("refresh_token", "good_refresh_token")
+
+	expectedSession := NewSession()
+	expectedSession.Client = client
+	expectedSession.Owner = &Owner{
+		"id",
+		"name",
+	}
+	expectedSession.RefreshToken = &Token{}
+	returnedSession := &(*expectedSession)
+
+	storage.On("FindSessionByRefreshToken", "good_refresh_token").Return(returnedSession, nil)
 
 	returnedSession.Scopes["scope1"] = &Scope{}
 	returnedSession.Scopes["scope3"] = &Scope{}
 	request.AddAll("scopes", []string{"scope1", "scope2", "scope3"})
 
 	//scopes not on session requested
-	session, error = grant.GenerateSession(request, server)
+	session, error := grant.GenerateSession(request, server)
 
 	assert.Nil(t, session)
 	assert.Equal(t, &InvalidScopeError{"scope2", nil}, error)
+}
 
+func TestRefreshGrantGenerateSessionWhereAllScopesAreOnSession(t *testing.T) {
+
+	grant := &RefreshTokenGrant{}
+	server := &MockServer{}
+	config := NewConfig()
+	server.On("Config").Return(config)
+	client, request, _ := runClientLoadAssertions(t, grant, server)
+
+	request.Set("refresh_token", "refresh_token")
+
+	storage := &MockSessionStorage{}
+	server.On("SessionStorage").Return(storage)
+
+	request.Set("refresh_token", "good_refresh_token")
+
+	expectedSession := NewSession()
+	expectedSession.Client = client
+	expectedSession.Owner = &Owner{
+		"id",
+		"name",
+	}
+	expectedSession.RefreshToken = &Token{}
+	returnedSession := &(*expectedSession)
+
+	storage.On("FindSessionByRefreshToken", "good_refresh_token").Return(returnedSession, nil)
+
+	returnedSession.Scopes["scope1"] = &Scope{}
+	returnedSession.Scopes["scope3"] = &Scope{}
 	returnedSession.Scopes["scope2"] = &Scope{}
+	request.AddAll("scopes", []string{"scope1", "scope2", "scope3"})
+
 
 	//scopes all on session requested
-	session, error = grant.GenerateSession(request, server)
+	session, error := grant.GenerateSession(request, server)
 
 	assert.Equal(t, expectedSession, session)
 	assert.Nil(t, error)
