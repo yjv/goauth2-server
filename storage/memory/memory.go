@@ -6,27 +6,27 @@ import (
 	"time"
 )
 
-type MemoryOwnerClientStorage struct {
+type OwnerClientStorage struct {
 	ownersByUsername            map[string]*server.Owner
 	ownersByUsernameAndPassword map[string]*server.Owner
 	clientsByClientId           map[string]*server.Client
 	clientsByClientIdAndSecret  map[string]*server.Client
 }
 
-func (storage *MemoryOwnerClientStorage) AddClient(clientId string, clientSecret string, client *server.Client) *MemoryOwnerClientStorage {
+func (storage *OwnerClientStorage) AddClient(clientId string, clientSecret string, client *server.Client) *OwnerClientStorage {
 
 	storage.clientsByClientId[clientId] = client
 	storage.clientsByClientIdAndSecret[clientId+":"+clientSecret] = client
 	return storage
 }
-func (storage *MemoryOwnerClientStorage) AddOwner(username string, password string, owner *server.Owner) *MemoryOwnerClientStorage {
+func (storage *OwnerClientStorage) AddOwner(username string, password string, owner *server.Owner) *OwnerClientStorage {
 
 	storage.ownersByUsername[username] = owner
 	storage.ownersByUsernameAndPassword[username+":"+password] = owner
 	return storage
 }
 
-func (storage *MemoryOwnerClientStorage) FindClientById(clientId string) (*server.Client, error) {
+func (storage *OwnerClientStorage) FindClientById(clientId string) (*server.Client, error) {
 
 	client, ok := storage.clientsByClientId[clientId]
 
@@ -38,7 +38,7 @@ func (storage *MemoryOwnerClientStorage) FindClientById(clientId string) (*serve
 	return client, nil
 }
 
-func (storage *MemoryOwnerClientStorage) FindClientByIdAndSecret(clientId string, clientSecret string) (*server.Client, error) {
+func (storage *OwnerClientStorage) FindClientByIdAndSecret(clientId string, clientSecret string) (*server.Client, error) {
 
 	client, ok := storage.clientsByClientIdAndSecret[clientId+":"+clientSecret]
 
@@ -50,7 +50,7 @@ func (storage *MemoryOwnerClientStorage) FindClientByIdAndSecret(clientId string
 	return client, nil
 }
 
-func (storage *MemoryOwnerClientStorage) RefreshClient(client *server.Client) (*server.Client, error) {
+func (storage *OwnerClientStorage) RefreshClient(client *server.Client) (*server.Client, error) {
 
 	client, exists := storage.clientsByClientId[client.Id]
 
@@ -62,7 +62,7 @@ func (storage *MemoryOwnerClientStorage) RefreshClient(client *server.Client) (*
 	return client, nil
 }
 
-func (storage *MemoryOwnerClientStorage) FindOwnerByUsername(username string) (*server.Owner, error) {
+func (storage *OwnerClientStorage) FindOwnerByUsername(username string) (*server.Owner, error) {
 
 	owner, ok := storage.ownersByUsername[username]
 
@@ -74,7 +74,7 @@ func (storage *MemoryOwnerClientStorage) FindOwnerByUsername(username string) (*
 	return owner, nil
 }
 
-func (storage *MemoryOwnerClientStorage) FindOwnerByUsernameAndPassword(username string, password string) (*server.Owner, error) {
+func (storage *OwnerClientStorage) FindOwnerByUsernameAndPassword(username string, password string) (*server.Owner, error) {
 
 	owner, ok := storage.ownersByUsernameAndPassword[username+":"+password]
 
@@ -86,7 +86,7 @@ func (storage *MemoryOwnerClientStorage) FindOwnerByUsernameAndPassword(username
 	return owner, nil
 }
 
-func (storage *MemoryOwnerClientStorage) RefreshOwner(owner *server.Owner) (*server.Owner, error) {
+func (storage *OwnerClientStorage) RefreshOwner(owner *server.Owner) (*server.Owner, error) {
 
 	owner, exists := storage.ownersByUsername[owner.Id]
 
@@ -98,9 +98,9 @@ func (storage *MemoryOwnerClientStorage) RefreshOwner(owner *server.Owner) (*ser
 	return owner, nil
 }
 
-func NewMemoryOwnerClientStorage() *MemoryOwnerClientStorage {
+func NewOwnerClientStorage() *OwnerClientStorage {
 
-	return &MemoryOwnerClientStorage{
+	return &OwnerClientStorage{
 		make(map[string]*server.Owner),
 		make(map[string]*server.Owner),
 		make(map[string]*server.Client),
@@ -108,12 +108,12 @@ func NewMemoryOwnerClientStorage() *MemoryOwnerClientStorage {
 	}
 }
 
-type MemorySessionStorage struct {
+type SessionStorage struct {
 	sessionsByAccessToken  map[string]*server.Session
 	sessionsByRefreshToken map[string]*server.Session
 }
 
-func (storage *MemorySessionStorage) FindSessionByAccessToken(accessToken string) (*server.Session, error) {
+func (storage *SessionStorage) FindSessionByAccessToken(accessToken string) (*server.Session, error) {
 
 	session, ok := storage.sessionsByAccessToken[accessToken]
 
@@ -135,7 +135,7 @@ func (storage *MemorySessionStorage) FindSessionByAccessToken(accessToken string
 	return session, nil
 }
 
-func (storage *MemorySessionStorage) FindSessionByRefreshToken(refreshToken string) (*server.Session, error) {
+func (storage *SessionStorage) FindSessionByRefreshToken(refreshToken string) (*server.Session, error) {
 
 	session, ok := storage.sessionsByRefreshToken[refreshToken]
 
@@ -153,7 +153,7 @@ func (storage *MemorySessionStorage) FindSessionByRefreshToken(refreshToken stri
 	return session, nil
 }
 
-func (storage *MemorySessionStorage) SaveSession(session *server.Session) {
+func (storage *SessionStorage) SaveSession(session *server.Session) {
 
 	storage.sessionsByAccessToken[session.AccessToken.Token] = session
 
@@ -163,30 +163,30 @@ func (storage *MemorySessionStorage) SaveSession(session *server.Session) {
 	}
 }
 
-func (storage *MemorySessionStorage) DeleteSession(session *server.Session) {
+func (storage *SessionStorage) DeleteSession(session *server.Session) {
 
 	delete(storage.sessionsByAccessToken, session.AccessToken.Token)
 	delete(storage.sessionsByRefreshToken, session.RefreshToken.Token)
 }
 
-func (storage *MemorySessionStorage) isExpired(token *server.Token) bool {
+func (storage *SessionStorage) isExpired(token *server.Token) bool {
 
 	return token == nil || (token.Expires != server.NoExpiration && token.Expires < int(time.Now().UTC().Unix()))
 }
 
-func NewMemorySessionStorage() *MemorySessionStorage {
+func NewSessionStorage() *SessionStorage {
 
-	return &MemorySessionStorage{
+	return &SessionStorage{
 		make(map[string]*server.Session),
 		make(map[string]*server.Session),
 	}
 }
 
-type MemoryScopeStorage struct {
+type ScopeStorage struct {
 	scopes map[string]*server.Scope
 }
 
-func (storage *MemoryScopeStorage) FindScopeByName(name string) (*server.Scope, error) {
+func (storage *ScopeStorage) FindScopeByName(name string) (*server.Scope, error) {
 
 	scope, ok := storage.scopes[name]
 
@@ -197,15 +197,15 @@ func (storage *MemoryScopeStorage) FindScopeByName(name string) (*server.Scope, 
 	return scope, nil
 }
 
-func (storage *MemoryScopeStorage) Set(name string, scope *server.Scope) *MemoryScopeStorage {
+func (storage *ScopeStorage) Set(name string, scope *server.Scope) *ScopeStorage {
 
 	storage.scopes[name] = scope
 	return storage
 }
 
-func NewMemoryScopeStorage() *MemoryScopeStorage {
+func NewScopeStorage() *ScopeStorage {
 
-	return &MemoryScopeStorage{
+	return &ScopeStorage{
 		make(map[string]*server.Scope),
 	}
 }
