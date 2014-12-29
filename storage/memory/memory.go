@@ -32,7 +32,7 @@ func (storage *OwnerClientStorage) FindClientById(clientId string) (*server.Clie
 
 	if !ok {
 
-		return nil, fmt.Errorf("couldnt find the client")
+		return nil, fmt.Errorf("couldnt find the client with id %s", clientId)
 	}
 
 	return client, nil
@@ -44,7 +44,7 @@ func (storage *OwnerClientStorage) FindClientByIdAndSecret(clientId string, clie
 
 	if !ok {
 
-		return nil, fmt.Errorf("couldnt find the client")
+		return nil, fmt.Errorf("couldnt find the client with id %s and secret", clientId)
 	}
 
 	return client, nil
@@ -56,7 +56,7 @@ func (storage *OwnerClientStorage) RefreshClient(client *server.Client) (*server
 
 	if !exists {
 
-		return nil, fmt.Errorf("failed to refresh client")
+		return nil, fmt.Errorf("failed to refresh client with id %s", client.Id)
 	}
 
 	return client, nil
@@ -68,7 +68,7 @@ func (storage *OwnerClientStorage) FindOwnerByUsername(username string) (*server
 
 	if !ok {
 
-		return nil, fmt.Errorf("couldnt find the owner")
+		return nil, fmt.Errorf("couldnt find the owner by username %s", username)
 	}
 
 	return owner, nil
@@ -80,7 +80,7 @@ func (storage *OwnerClientStorage) FindOwnerByUsernameAndPassword(username strin
 
 	if !ok {
 
-		return nil, fmt.Errorf("couldnt find the owner")
+		return nil, fmt.Errorf("couldnt find the owner by username %s and password", username)
 	}
 
 	return owner, nil
@@ -92,7 +92,7 @@ func (storage *OwnerClientStorage) RefreshOwner(owner *server.Owner) (*server.Ow
 
 	if !exists {
 
-		return nil, fmt.Errorf("failed to refresh owner")
+		return nil, fmt.Errorf("failed to refresh owner with id %s", owner.Id)
 	}
 
 	return owner, nil
@@ -119,7 +119,7 @@ func (storage *SessionStorage) FindSessionByAccessToken(accessToken string) (*se
 
 	if !ok {
 
-		return nil, fmt.Errorf("Session not found")
+		return nil, fmt.Errorf("Session not found for access token ending in %s", accessToken[len(accessToken)-5:])
 	}
 
 	if storage.isExpired(session.AccessToken) {
@@ -129,7 +129,7 @@ func (storage *SessionStorage) FindSessionByAccessToken(accessToken string) (*se
 			go storage.DeleteSession(session)
 		}
 
-		return nil, fmt.Errorf("Refresh token is expired")
+		return nil, fmt.Errorf("Refresh token ending in %s is expired", session.RefreshToken[len(session.RefreshToken)-5:])
 	}
 
 	return session, nil
@@ -141,13 +141,13 @@ func (storage *SessionStorage) FindSessionByRefreshToken(refreshToken string) (*
 
 	if !ok {
 
-		return nil, fmt.Errorf("Session for refresh token %q not found", refreshToken)
+		return nil, fmt.Errorf("Session for refresh token ending in %q not found", refreshToken[len(refreshToken)-5:])
 	}
 
 	if storage.isExpired(session.RefreshToken) {
 
 		go storage.DeleteSession(session)
-		return nil, fmt.Errorf("Refresh token is expired")
+		return nil, fmt.Errorf("Refresh token ending in %s is expired", session.RefreshToken[len(session.RefreshToken)-5:])
 	}
 
 	return session, nil
