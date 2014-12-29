@@ -153,24 +153,6 @@ func NewWithTokenGenerator(
 	)
 }
 
-func NewWithConfig(
-	config *Config,
-	clientStorage ClientStorage,
-	ownerStorage OwnerStorage,
-	sessionStorage SessionStorage,
-	scopeStorage ScopeStorage,
-) *DefaultServer {
-
-	return NewWithConfigAndTokenGenerator(
-		config,
-		NewDefaultTokenGenerator(),
-		clientStorage,
-		ownerStorage,
-		sessionStorage,
-		scopeStorage,
-	)
-}
-
 func NewWithConfigAndTokenGenerator(
 	config *Config,
 	tokenGenerator TokenGenerator,
