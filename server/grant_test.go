@@ -35,33 +35,60 @@ func TestPasswordGrant(t *testing.T) {
 	assert.True(t, grant.ShouldGenerateRefreshToken(NewSession()))
 }
 
-func TestPasswordGrantGenerateSession(t *testing.T) {
+func TestPasswordGrantGenerateSessionWithUsernameMissing(t *testing.T) {
 
 	grant := &PasswordGrant{BaseGrant{123}}
 	server := &MockServer{}
-	client, request, storage := runClientLoadAssertions(t, grant, server)
+	_, request, _ := runClientLoadAssertions(t, grant, server)
 
 	//username missing
 	session, error := grant.GenerateSession(request, server)
 	assert.Nil(t, session)
 	assert.Equal(t, &RequiredValueMissingError{"username"}, error)
+}
+
+func TestPasswordGrantGenerateSessionWithPasswordMissing(t *testing.T) {
+
+	grant := &PasswordGrant{BaseGrant{123}}
+	server := &MockServer{}
+	_, request, _ := runClientLoadAssertions(t, grant, server)
 
 	request.Set("username", "username")
 
 	//password missing
-	session, error = grant.GenerateSession(request, server)
+	session, error := grant.GenerateSession(request, server)
 	assert.Nil(t, session)
 	assert.Equal(t, &RequiredValueMissingError{"password"}, error)
+}
 
+func TestPasswordGrantGenerateSessionWhereOwnerFailedToLoad(t *testing.T) {
+
+	grant := &PasswordGrant{BaseGrant{123}}
+	server := &MockServer{}
+	_, request, storage := runClientLoadAssertions(t, grant, server)
+
+	request.Set("username", "username")
 	request.Set("password", "password")
 
 	server.On("OwnerStorage").Return(storage)
 	storage.On("FindOwnerByUsernameAndPassword", "username", "password").Return(nil, errors.New("error"))
 
 	//owner failed to load
-	session, error = grant.GenerateSession(request, server)
+	session, error := grant.GenerateSession(request, server)
 	assert.Nil(t, session)
 	assert.Equal(t, &StorageSearchFailedError{"owner", errors.New("error")}, error)
+}
+
+func TestPasswordGrantGenerateSessionWhereAllGood(t *testing.T) {
+
+	grant := &PasswordGrant{BaseGrant{123}}
+	server := &MockServer{}
+	client, request, storage := runClientLoadAssertions(t, grant, server)
+
+	request.Set("username", "username")
+	request.Set("password", "password")
+
+	server.On("OwnerStorage").Return(storage)
 
 	owner := &Owner{
 		"id",
@@ -76,7 +103,7 @@ func TestPasswordGrantGenerateSession(t *testing.T) {
 	expectedSession.Owner = owner
 
 	//client loads
-	session, error = grant.GenerateSession(request, server)
+	session, error := grant.GenerateSession(request, server)
 
 	assert.Equal(t, expectedSession, session)
 	assert.Nil(t, error)
@@ -244,7 +271,7 @@ func runClientLoadAssertions(t *testing.T, grant Grant, server *MockServer) (*Cl
 
 	request.Set("client_secret", "client_secret")
 
-	storage.On("FindClientByIdAndSecret", "client_id", "client_secret").Return(nil, errors.New("error"))
+	storage.On("FindClientByIdAndSecret", "client_id", "client_secret").Return(nil, errors.New("error")).Times(1)
 
 	//client failed to load
 	session, error = grant.GenerateSession(request, server)
@@ -257,9 +284,9 @@ func runClientLoadAssertions(t *testing.T, grant Grant, server *MockServer) (*Cl
 		"redirect_uri",
 	}
 
-	request.Set("client_secret", "good_client_secret")
+	request.Set("client_secret", "client_secret")
 
-	storage.On("FindClientByIdAndSecret", "client_id", "good_client_secret").Return(client, nil)
+	storage.On("FindClientByIdAndSecret", "client_id", "client_secret").Return(client, nil)
 
 	return client, request, storage
 }
