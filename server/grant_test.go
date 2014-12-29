@@ -395,7 +395,6 @@ func TestRefreshGrantGenerateSessionWhereAllScopesAreOnSession(t *testing.T) {
 	returnedSession.Scopes["scope2"] = &Scope{}
 	request.AddAll("scopes", []string{"scope1", "scope2", "scope3"})
 
-
 	//scopes all on session requested
 	session, error := grant.GenerateSession(request, server)
 
