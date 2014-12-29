@@ -1,8 +1,8 @@
 package memory
 
 import (
-	"github.com/yjv/goauth2-server/server"
 	"fmt"
+	"github.com/yjv/goauth2-server/server"
 	"time"
 )
 

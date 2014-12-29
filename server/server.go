@@ -18,7 +18,7 @@ type DefaultServer struct {
 	clientStorage  ClientStorage
 	ownerStorage   OwnerStorage
 	sessionStorage SessionStorage
-	scopeStorage ScopeStorage
+	scopeStorage   ScopeStorage
 }
 
 func (server *DefaultServer) AddGrant(grant Grant) *DefaultServer {

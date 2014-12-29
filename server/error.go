@@ -78,7 +78,7 @@ func (error *UnexpectedError) OauthErrorCode() ErrorCode {
 }
 
 type InvalidScopeError struct {
-	name string
+	name     string
 	previous error
 }
 

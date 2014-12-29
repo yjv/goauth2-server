@@ -110,7 +110,7 @@ func (grant *PasswordGrant) ShouldGenerateRefreshToken(session *Session) bool {
 type RefreshTokenGrant struct {
 	BaseGrant
 	RotateRefreshTokens bool
-	RefreshOwner bool
+	RefreshOwner        bool
 }
 
 func (grant *RefreshTokenGrant) GenerateSession(oauthSessionRequest OauthSessionRequest, server Server) (*Session, error) {

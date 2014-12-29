@@ -167,7 +167,6 @@ func (grant *MockGrant) AccessTokenExpiration() int {
 	return grant.Mock.Called().Get(0).(int)
 }
 
-
 func (grant *MockGrant) ShouldGenerateRefreshToken(session *Session) bool {
 
 	return grant.Mock.Called(session).Bool(0)
